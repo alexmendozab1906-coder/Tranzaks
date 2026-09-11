@@ -78,20 +78,6 @@
             border-radius: 4px;
             border: 1px solid #ccc;
         }
-        @media print {
-            body * { visibility: hidden; }
-            #ticket-print, #ticket-print * { visibility: visible; }
-            #ticket-print {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 58mm;
-                font-family: monospace;
-                font-size: 11px;
-                padding: 5px;
-            }
-            .no-print { display: none; }
-        }
     </style>
 </head>
 <body>
@@ -155,7 +141,6 @@
                 <input type="number" id="prod-stock" placeholder="Cantidad Inicial (Stock)" required>
                 
                 <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto (.jpg, .png):</label>
-                <!-- Corrección aplicada aquí: accept=".jpg, .jpeg, .png, image/*" para forzar o facilitar la búsqueda de archivos JPG -->
                 <input type="file" id="prod-imagen" accept=".jpg, .jpeg, .png, image/*">
 
                 <button type="submit">Guardar / Actualizar Producto</button>
@@ -191,7 +176,7 @@
             <div style="max-height: 180px; overflow-y: auto;">
                 <table id="tabla-historial">
                     <thead>
-                        <tr><th>Hora</th><th>Total</th><th>Pago</th><th>Acciones</th></tr>
+                        <tr><th>Fecha y Hora</th><th>Total</th><th>Pago</th><th>Acciones</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -251,20 +236,6 @@
                 <button type="button" class="btn-info" onclick="importarBackupTotal()">📥 Cargar y Sincronizar Datos</button>
             </div>
         </div>
-    </div>
-
-    <!-- PLANTILLA DE IMPRESIÓN (TICKET) -->
-    <div id="ticket-print" style="display:none;">
-        <h3 style="text-align:center; margin-bottom:5px;">TICKET DE VENTA</h3>
-        <p id="ticket-fecha" style="margin:2px 0;"></p>
-        <p id="ticket-metodo" style="margin:2px 0;"></p>
-        <hr>
-        <div id="ticket-detalle"></div>
-        <hr>
-        <p style="font-size:14px; font-weight:bold; margin: 5px 0;">TOTAL: $<span id="ticket-total"></span></p>
-        <p id="ticket-pago-info" style="margin: 2px 0;"></p>
-        <br>
-        <p style="text-align:center;">¡Gracias por su compra!</p>
     </div>
 
     <script>
@@ -553,10 +524,10 @@
             actualizarTablaProductos();
             actualizarListaSugerencias();
 
+            const fechaActual = new Date();
             const venta = {
                 id: Date.now(),
-                fechaHora: new Date().toLocaleString(),
-                hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                fechaHora: fechaActual.toLocaleString(),
                 items: [...carrito],
                 totalVenta: totalVenta,
                 totalCosto: totalCosto,
@@ -589,26 +560,53 @@
                 return;
             }
 
-            document.getElementById('ticket-fecha').innerText = "Fecha: " + venta.fechaHora;
-            document.getElementById('ticket-metodo').innerText = "Pago: " + venta.metodoPago;
-
             let detalleHtml = '';
             venta.items.forEach(i => {
-                detalleHtml += `<div style="display:flex; justify-content:space-between;"><span>${i.nombre} x${i.cantidad}</span> <span>$${(i.precio * i.cantidad).toFixed(2)}</span></div>`;
+                detalleHtml += `<div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>${i.nombre} x${i.cantidad}</span> <span>$${(i.precio * i.cantidad).toFixed(2)}</span></div>`;
             });
-            document.getElementById('ticket-detalle').innerHTML = detalleHtml;
-            document.getElementById('ticket-total').innerText = venta.totalVenta.toFixed(2);
-            
-            if(venta.metodoPago === 'Efectivo') {
-                document.getElementById('ticket-pago-info').innerText = `Recibido: $${venta.pagado.toFixed(2)} | Cambio: $${venta.cambio.toFixed(2)}`;
-            } else {
-                document.getElementById('ticket-pago-info').innerText = '';
+
+            const pagoInfoHTML = venta.metodoPago === 'Efectivo' 
+                ? `<p style="margin: 4px 0;">Recibido: $${venta.pagado.toFixed(2)}</p><p style="margin: 4px 0;">Cambio: $${venta.cambio.toFixed(2)}</p>` 
+                : '';
+
+            const ventanaImpresion = window.open('', '_blank', 'width=300,height=600');
+            if (!ventanaImpresion) {
+                alert('Por favor, permite las ventanas emergentes (pop-ups) en tu navegador para poder imprimir el ticket.');
+                return;
             }
 
-            const printElement = document.getElementById('ticket-print');
-            printElement.style.display = 'block';
-            window.print();
-            printElement.style.display = 'none';
+            ventanaImpresion.document.write(`
+                <html>
+                    <head>
+                        <title>Ticket de Venta</title>
+                        <style>
+                            body { font-family: 'Courier New', monospace; font-size: 12px; width: 58mm; margin: 0; padding: 5px; color: #000; }
+                            h3 { text-align: center; margin: 0 0 5px 0; font-size: 14px; }
+                            p { margin: 2px 0; }
+                            hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+                        </style>
+                    </head>
+                    <body>
+                        <h3>TICKET DE VENTA</h3>
+                        <p>Fecha/Hora: ${venta.fechaHora}</p>
+                        <p>Pago: ${venta.metodoPago}</p>
+                        <hr>
+                        ${detalleHtml}
+                        <hr>
+                        <p style="font-size: 14px; font-weight: bold;">TOTAL: $${venta.totalVenta.toFixed(2)}</p>
+                        ${pagoInfoHTML}
+                        <br>
+                        <p style="text-align: center;">¡Gracias por su compra!</p>
+                        <script>
+                            window.onload = function() {
+                                window.print();
+                                window.close();
+                            }
+                        <\/script>
+                    </body>
+                </html>
+            `);
+            ventanaImpresion.document.close();
         }
 
         function imprimirUltimaVenta() {
@@ -621,7 +619,9 @@
 
         function imprimirVentaPorIndice(index) {
             const venta = ventasDelDia[index];
-            if (venta) imprimirTicket(venta);
+            if (venta) {
+                imprimirTicket(venta);
+            }
         }
 
         function actualizarVistaCorte() {
@@ -637,7 +637,7 @@
 
                 tbody.innerHTML += `
                     <tr>
-                        <td>${v.hora}</td>
+                        <td>${v.fechaHora}</td>
                         <td>$${v.totalVenta.toFixed(2)}</td>
                         <td>${v.metodoPago}</td>
                         <td>

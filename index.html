@@ -3,24 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Punto de Venta Pro</title>
+    <title>Punto de Venta e Inventario</title>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f0f2f5; margin: 15px; color: #333; }
-        h1 { text-align: center; margin-bottom: 15px; color: #1a252f; font-size: 1.6rem; }
-        
-        .nav-tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 15px;
-            background: #e2e8f0;
-            padding: 5px;
-            border-radius: 10px;
-            flex-wrap: wrap;
-        }
-
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #f1f5f9; color: #333; }
+        h1 { font-size: 1.4rem; text-align: center; color: #2c3e50; margin-bottom: 15px; }
+        .nav-tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
         .tab-btn {
-            flex: 1;
             min-width: 120px;
             padding: 10px;
             background: transparent;
@@ -32,16 +20,13 @@
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
         }
-
         .tab-btn.active {
             background-color: #2c3e50;
             color: white;
             box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         }
-
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-
         .card {
             background: #ffffff;
             padding: 20px;
@@ -50,9 +35,7 @@
             max-width: 800px;
             margin: 0 auto;
         }
-
         h2 { font-size: 1.2rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; margin-top: 0; }
-
         input, select, button {
             width: 100%;
             padding: 10px;
@@ -60,8 +43,8 @@
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 0.95rem;
+            box-sizing: border-box;
         }
-
         button {
             background-color: #27ae60;
             color: white;
@@ -70,10 +53,8 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-
         button:hover { background-color: #219150; }
         button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        
         .btn-danger { background-color: #e74c3c; }
         .btn-danger:hover { background-color: #c0392b; }
         .btn-info { background-color: #2980b9; }
@@ -84,15 +65,12 @@
         .btn-excel:hover { background-color: #0b5329; }
         .btn-sync { background-color: #8e44ad; }
         .btn-sync:hover { background-color: #732d91; }
-
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
         th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: middle; }
         th { background-color: #f8fafc; color: #475569; }
-
         .monto-total { font-size: 1.5rem; color: #2c3e50; font-weight: bold; text-align: right; margin: 10px 0; }
         .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
         .corte-resumen p { margin: 6px 0; font-size: 1rem; }
-
         .img-preview-table {
             width: 40px;
             height: 40px;
@@ -100,7 +78,6 @@
             border-radius: 4px;
             border: 1px solid #ccc;
         }
-
         @media print {
             body * { visibility: hidden; }
             #ticket-print, #ticket-print * { visibility: visible; }
@@ -177,8 +154,9 @@
                 </div>
                 <input type="number" id="prod-stock" placeholder="Cantidad Inicial (Stock)" required>
                 
-                <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto:</label>
-                <input type="file" id="prod-imagen" accept="image/*">
+                <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto (.jpg, .png):</label>
+                <!-- Corrección aplicada aquí: accept=".jpg, .jpeg, .png, image/*" para forzar o facilitar la búsqueda de archivos JPG -->
+                <input type="file" id="prod-imagen" accept=".jpg, .jpeg, .png, image/*">
 
                 <button type="submit">Guardar / Actualizar Producto</button>
             </form>
@@ -229,8 +207,7 @@
             <h2>Historial Mensual</h2>
             
             <label>Seleccionar Mes / Año:</label>
-            <select id="select-mes-filtro" onchange="actualizarVistaMensual()">
-            </select>
+            <select id="select-mes-filtro" onchange="actualizarVistaMensual()"></select>
 
             <div class="corte-resumen" style="background-color: #f0fdf4;">
                 <p><strong>Días Registrados en el Mes:</strong> <span id="mes-dias">0</span></p>
@@ -291,7 +268,6 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN DE INDEXEDDB PARA ALMACENAMIENTO MASIVO EN EL TELÉFONO
         let db;
         let productos = {};
         let ventasDelDia = [];
@@ -475,23 +451,13 @@
 
         function obtenerCodigoDeBusqueda(termino) {
             const busqueda = termino.trim().toLowerCase();
-            
-            if (productos[termino.trim()]) {
-                return termino.trim();
-            }
-
+            if (productos[termino.trim()]) return termino.trim();
             for (let cod in productos) {
-                if (productos[cod].nombre.toLowerCase() === busqueda) {
-                    return cod;
-                }
+                if (productos[cod].nombre.toLowerCase() === busqueda) return cod;
             }
-
             for (let cod in productos) {
-                if (productos[cod].nombre.toLowerCase().includes(busqueda)) {
-                    return cod;
-                }
+                if (productos[cod].nombre.toLowerCase().includes(busqueda)) return cod;
             }
-
             return null;
         }
 
@@ -655,9 +621,7 @@
 
         function imprimirVentaPorIndice(index) {
             const venta = ventasDelDia[index];
-            if (venta) {
-                imprimirTicket(venta);
-            }
+            if (venta) imprimirTicket(venta);
         }
 
         function actualizarVistaCorte() {
@@ -692,7 +656,6 @@
         function cancelarVenta(index) {
             if (confirm('¿Deseas anular esta venta? El stock se devolverá al inventario.')) {
                 const ventaAnulada = ventasDelDia[index];
-                
                 ventaAnulada.items.forEach(item => {
                     if (productos[item.codigo]) {
                         productos[item.codigo].stock += item.cantidad;
@@ -719,7 +682,6 @@
                 const ahora = new Date();
                 const totalIngresos = ventasDelDia.reduce((s, v) => s + v.totalVenta, 0);
                 const totalGanancia = ventasDelDia.reduce((s, v) => s + v.ganancia, 0);
-
                 const claveMes = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
 
                 const registroCorte = {
@@ -750,7 +712,6 @@
         function cargarOpcionesMeses() {
             const select = document.getElementById('select-mes-filtro');
             select.innerHTML = '';
-
             const mesesUnicos = [...new Set(historialMensual.map(c => c.claveMes))];
 
             if (mesesUnicos.length === 0) {
@@ -761,24 +722,25 @@
 
             mesesUnicos.forEach(m => {
                 const [ano, mes] = m.split('-');
-                const nombreMes = new Date(ano, mes - 1).toLocaleString('es', { month: 'long' });
-                select.innerHTML += `<option value="${m}">${nombreMes.toUpperCase()} ${ano}</option>`;
+                const option = document.createElement('option');
+                option.value = m;
+                option.innerText = `${mes}/${ano}`;
+                select.appendChild(option);
             });
         }
 
         function actualizarVistaMensual() {
-            const select = document.getElementById('select-mes-filtro');
-            const mesSeleccionado = select.value;
-
-            const cortesDelMes = historialMensual.filter(c => c.claveMes === mesSeleccionado);
+            const mesSeleccionado = document.getElementById('select-mes-filtro').value;
+            const cortesFiltrados = historialMensual.filter(c => c.claveMes === mesSeleccionado);
 
             let totalIngresosMes = 0;
             let totalGananciasMes = 0;
+            let diasRegistrados = cortesFiltrados.length;
 
             const tbody = document.querySelector('#tabla-cortes-mensuales tbody');
             tbody.innerHTML = '';
 
-            cortesDelMes.forEach(c => {
+            cortesFiltrados.forEach(c => {
                 totalIngresosMes += c.totalIngresos;
                 totalGananciasMes += c.totalGanancia;
 
@@ -787,36 +749,36 @@
                         <td>${c.fechaCompleta}</td>
                         <td>${c.cantVentas}</td>
                         <td>$${c.totalIngresos.toFixed(2)}</td>
-                        <td style="color:#166534; font-weight:bold;">$${c.totalGanancia.toFixed(2)}</td>
+                        <td>$${c.totalGanancia.toFixed(2)}</td>
                     </tr>`;
             });
 
-            document.getElementById('mes-dias').innerText = cortesDelMes.length;
+            document.getElementById('mes-dias').innerText = diasRegistrados;
             document.getElementById('mes-total-ingresos').innerText = totalIngresosMes.toFixed(2);
             document.getElementById('mes-total-ganancias').innerText = totalGananciasMes.toFixed(2);
         }
 
         function exportarExcelMes() {
-            const select = document.getElementById('select-mes-filtro');
-            const mesSeleccionado = select.value;
-            const cortesDelMes = historialMensual.filter(c => c.claveMes === mesSeleccionado);
+            const mesSeleccionado = document.getElementById('select-mes-filtro').value;
+            const cortesFiltrados = historialMensual.filter(c => c.claveMes === mesSeleccionado);
 
-            if (cortesDelMes.length === 0) {
-                alert('No hay datos registrados en este mes para exportar.');
+            if (cortesFiltrados.length === 0) {
+                alert('No hay datos para exportar en este mes.');
                 return;
             }
 
-            let csvContent = "\uFEFFFecha,Cantidad de Ventas,Total Venta Bruta,Ganancia Neta\n";
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "Fecha,Ventas Realizadas,Total Ingresos ($),Ganancia Neta ($)\r\n";
 
-            cortesDelMes.forEach(c => {
-                csvContent += `"${c.fechaCompleta}",${c.cantVentas},${c.totalIngresos.toFixed(2)},${c.totalGanancia.toFixed(2)}\n`;
+            cortesFiltrados.forEach(c => {
+                let row = `"${c.fechaCompleta}",${c.cantVentas},${c.totalIngresos.toFixed(2)},${c.totalGanancia.toFixed(2)}`;
+                csvContent += row + "\r\n";
             });
 
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
+            const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Reporte_Mensual_${mesSeleccionado}.csv`);
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `reporte_corte_${mesSeleccionado}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -826,59 +788,55 @@
             const dataBackup = {
                 productos: productos,
                 ventasDelDia: ventasDelDia,
-                historialMensual: historialMensual,
-                fechaExportacion: new Date().toLocaleString()
+                historialMensual: historialMensual
             };
 
-            const jsonString = JSON.stringify(dataBackup, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Backup_PuntoVenta_${new Date().toISOString().slice(0,10)}.json`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataBackup));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `respaldo_pos_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
         }
 
         function importarBackupTotal() {
-            const input = document.getElementById('input-archivo-backup');
-            if (!input.files || input.files.length === 0) {
-                alert('Por favor selecciona primero el archivo de respaldo (.json)');
+            const fileInput = document.getElementById('input-archivo-backup');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Por favor selecciona primero un archivo de respaldo (.json).');
                 return;
             }
 
-            const archivo = input.files[0];
+            const file = fileInput.files[0];
             const reader = new FileReader();
 
             reader.onload = function(e) {
                 try {
-                    const datosImportados = JSON.parse(e.target.result);
-
-                    if (datosImportados.productos) {
-                        productos = datosImportados.productos;
-                        guardarEnDB('productos', productos);
+                    const contenido = JSON.parse(e.target.result);
+                    if (contenido.productos) {
+                        productos = contenido.productos;
+                        guardarProductosDB();
                     }
-                    if (datosImportados.ventasDelDia) {
-                        ventasDelDia = datosImportados.ventasDelDia;
+                    if (contenido.ventasDelDia) {
+                        ventasDelDia = contenido.ventasDelDia;
                         guardarEnDB('ventasDelDia', ventasDelDia);
                     }
-                    if (datosImportados.historialMensual) {
-                        historialMensual = datosImportados.historialMensual;
+                    if (contenido.historialMensual) {
+                        historialMensual = contenido.historialMensual;
                         guardarEnDB('historialMensual', historialMensual);
                     }
 
                     actualizarTablaProductos();
                     actualizarListaSugerencias();
                     actualizarVistaCorte();
-
-                    alert('¡Sincronización exitosa! Todos los datos y productos han sido actualizados en la memoria interna.');
+                    alert('¡Sincronización completada con éxito! Los datos han sido cargados.');
                 } catch (error) {
-                    alert('El archivo seleccionado no es válido o está dañado.');
+                    console.error(error);
+                    alert('El archivo no es válido o está dañado.');
                 }
             };
 
-            reader.readAsText(archivo);
+            reader.readAsText(file);
         }
     </script>
 </body>

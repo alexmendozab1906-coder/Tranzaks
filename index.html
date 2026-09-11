@@ -21,14 +21,14 @@
 
         .tab-btn {
             flex: 1;
-            min-width: 140px;
-            padding: 12px;
+            min-width: 120px;
+            padding: 10px;
             background: transparent;
             color: #475569;
             border: none;
             border-radius: 8px;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
         }
@@ -80,6 +80,10 @@
         .btn-info:hover { background-color: #2471a3; }
         .btn-secondary { background-color: #7f8c8d; }
         .btn-secondary:hover { background-color: #6c757d; }
+        .btn-excel { background-color: #107c41; }
+        .btn-excel:hover { background-color: #0b5329; }
+        .btn-sync { background-color: #8e44ad; }
+        .btn-sync:hover { background-color: #732d91; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
         th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: middle; }
@@ -122,7 +126,8 @@
         <button type="button" class="tab-btn active" onclick="cambiarPestana('sec-ventas', this)">1. Ventas</button>
         <button type="button" class="tab-btn" onclick="cambiarPestana('sec-productos', this)">2. Productos</button>
         <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">3. Corte del Día</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">4. Registro Mensual</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">4. Registro Mes</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-sync', this)">5. Sincronizar</button>
     </div>
 
     <!-- SECCIÓN 1: VENTAS -->
@@ -221,7 +226,7 @@
     <!-- SECCIÓN 4: REGISTRO MENSUAL -->
     <div id="sec-mensual" class="tab-content">
         <div class="card">
-            <h2>Historial Mensual de Ventas y Ganancias</h2>
+            <h2>Historial Mensual</h2>
             
             <label>Seleccionar Mes / Año:</label>
             <select id="select-mes-filtro" onchange="actualizarVistaMensual()">
@@ -234,14 +239,39 @@
                 <p style="color: #166534; font-size: 1.25rem;"><strong>Ganancia Neta Total del Mes:</strong> $<span id="mes-total-ganancias">0.00</span></p>
             </div>
 
-            <h3 style="font-size: 1rem;">Cortes Diarios del Mes</h3>
-            <div style="max-height: 250px; overflow-y: auto;">
+            <button type="button" class="btn-excel" onclick="exportarExcelMes()">📊 Exportar Mes a Excel (CSV)</button>
+
+            <h3 style="font-size: 1rem; margin-top: 15px;">Cortes Diarios del Mes</h3>
+            <div style="max-height: 220px; overflow-y: auto;">
                 <table id="tabla-cortes-mensuales">
                     <thead>
                         <tr><th>Fecha</th><th>Ventas</th><th>Total Venta ($)</th><th>Ganancia Neta ($)</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 5: SINCRONIZAR ENTRE CELULARES (OFFLINE) -->
+    <div id="sec-sync" class="tab-content">
+        <div class="card">
+            <h2>Sincronización Offline entre Dispositivos</h2>
+            <p style="font-size: 0.9rem; color: #555;">
+                Pasa todos tus productos, ventas e historial de un celular a otro sin internet:
+            </p>
+
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #8e44ad;">
+                <h3 style="margin-top:0; font-size: 1rem; color: #8e44ad;">Paso 1: Exportar desde el Celular Origen</h3>
+                <p style="font-size: 0.88rem;">Genera un archivo de respaldo con toda tu información actual y envíalo al otro celular (por Bluetooth, cable o mensaje).</p>
+                <button type="button" class="btn-sync" onclick="exportarBackupTotal()">💾 Descargar Respaldo Total (.json)</button>
+            </div>
+
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2980b9;">
+                <h3 style="margin-top:0; font-size: 1rem; color: #2980b9;">Paso 2: Importar en el Celular Destino</h3>
+                <p style="font-size: 0.88rem;">Selecciona el archivo de respaldo que trajiste del otro celular para actualizar toda la aplicación.</p>
+                <input type="file" id="input-archivo-backup" accept=".json" style="margin-bottom: 8px;">
+                <button type="button" class="btn-info" onclick="importarBackupTotal()">📥 Cargar y Sincronizar Datos</button>
             </div>
         </div>
     </div>
@@ -282,7 +312,42 @@
             }
         }
 
-        // CONTROL DE PRODUCTOS CON IMAGEN Y ELIMINACIÓN
+        function comprimirImagen(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 200;
+                    const MAX_HEIGHT = 200;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const dataurl = canvas.toDataURL('image/jpeg', 0.7);
+                    callback(dataurl);
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
         document.getElementById('form-producto').addEventListener('submit', (e) => {
             e.preventDefault();
             const codigo = document.getElementById('prod-codigo').value.trim();
@@ -292,16 +357,12 @@
             const stock = parseInt(document.getElementById('prod-stock').value);
             const inputImagen = document.getElementById('prod-imagen');
 
-            // Si ya existe el producto y no se selecciona nueva imagen, mantenemos la anterior
             let imagenBase64 = productos[codigo] ? productos[codigo].imagen : '';
 
             if (inputImagen.files && inputImagen.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function (uploadEvent) {
-                    imagenBase64 = uploadEvent.target.result;
-                    guardarYActualizarProducto(codigo, nombre, costo, precio, stock, imagenBase64, e.target);
-                };
-                reader.readAsDataURL(inputImagen.files[0]);
+                comprimirImagen(inputImagen.files[0], function(imgOptimizada) {
+                    guardarYActualizarProducto(codigo, nombre, costo, precio, stock, imgOptimizada, e.target);
+                });
             } else {
                 guardarYActualizarProducto(codigo, nombre, costo, precio, stock, imagenBase64, e.target);
             }
@@ -383,7 +444,6 @@
             return null;
         }
 
-        // CONTROL DE VENTAS
         document.getElementById('form-venta').addEventListener('submit', (e) => {
             e.preventDefault();
             const entrada = document.getElementById('venta-busqueda').value;
@@ -549,7 +609,6 @@
             }
         }
 
-        // CONTROL DE CORTE DEL DÍA
         function actualizarVistaCorte() {
             let ingresos = 0;
             let costos = 0;
@@ -599,7 +658,6 @@
             }
         }
 
-        // CIERRE DE CAJA Y GUARDADO EN HISTORIAL MENSUAL
         function reiniciarDia() {
             if (ventasDelDia.length === 0) {
                 alert('No hay ventas registradas en el día actual.');
@@ -639,7 +697,6 @@
             }
         }
 
-        // CONTROL DE HISTORIAL MENSUAL
         function cargarOpcionesMeses() {
             const select = document.getElementById('select-mes-filtro');
             select.innerHTML = '';
@@ -689,7 +746,92 @@
             document.getElementById('mes-total-ganancias').innerText = totalGananciasMes.toFixed(2);
         }
 
-        // INICIALIZAR VISTAS
+        function exportarExcelMes() {
+            const select = document.getElementById('select-mes-filtro');
+            const mesSeleccionado = select.value;
+            const cortesDelMes = historialMensual.filter(c => c.claveMes === mesSeleccionado);
+
+            if (cortesDelMes.length === 0) {
+                alert('No hay datos registrados en este mes para exportar.');
+                return;
+            }
+
+            let csvContent = "\uFEFFFecha,Cantidad de Ventas,Total Venta Bruta,Ganancia Neta\n";
+
+            cortesDelMes.forEach(c => {
+                csvContent += `"${c.fechaCompleta}",${c.cantVentas},${c.totalIngresos.toFixed(2)},${c.totalGanancia.toFixed(2)}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Reporte_Mensual_${mesSeleccionado}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // FUNCIONES DE SINCRONIZACIÓN OFFLINE ENTRE CELULARES
+        function exportarBackupTotal() {
+            const dataBackup = {
+                productos: productos,
+                ventasDelDia: ventasDelDia,
+                historialMensual: historialMensual,
+                fechaExportacion: new Date().toLocaleString()
+            };
+
+            const jsonString = JSON.stringify(dataBackup, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Backup_PuntoVenta_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function importarBackupTotal() {
+            const input = document.getElementById('input-archivo-backup');
+            if (!input.files || input.files.length === 0) {
+                alert('Por favor selecciona primero el archivo de respaldo (.json)');
+                return;
+            }
+
+            const archivo = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const datosImportados = JSON.parse(e.target.result);
+
+                    if (datosImportados.productos) {
+                        productos = datosImportados.productos;
+                        localStorage.setItem('pos_pro_productos', JSON.stringify(productos));
+                    }
+                    if (datosImportados.ventasDelDia) {
+                        ventasDelDia = datosImportados.ventasDelDia;
+                        localStorage.setItem('pos_pro_ventas', JSON.stringify(ventasDelDia));
+                    }
+                    if (datosImportados.historialMensual) {
+                        historialMensual = datosImportados.historialMensual;
+                        localStorage.setItem('pos_pro_cortes_mensuales', JSON.stringify(historialMensual));
+                    }
+
+                    actualizarTablaProductos();
+                    actualizarListaSugerencias();
+                    actualizarVistaCorte();
+
+                    alert('¡Sincronización exitosa! Todos los datos y productos han sido actualizados en este dispositivo.');
+                } catch (error) {
+                    alert('El archivo seleccionado no es válido o está dañado.');
+                }
+            };
+
+            reader.readAsText(archivo);
+        }
+
         actualizarTablaProductos();
         actualizarListaSugerencias();
         actualizarVistaCorte();

@@ -256,20 +256,20 @@
     <!-- SECCIÓN 5: SINCRONIZAR ENTRE CELULARES (OFFLINE) -->
     <div id="sec-sync" class="tab-content">
         <div class="card">
-            <h2>Sincronización Offline entre Dispositivos</h2>
+            <h2>Sincronización Offline (Memoria Interna)</h2>
             <p style="font-size: 0.9rem; color: #555;">
-                Pasa todos tus productos, ventas e historial de un celular a otro sin internet:
+                Esta app guarda grandes volúmenes de datos directamente en el almacenamiento interno de tu teléfono (IndexedDB):
             </p>
 
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #8e44ad;">
-                <h3 style="margin-top:0; font-size: 1rem; color: #8e44ad;">Paso 1: Exportar desde el Celular Origen</h3>
-                <p style="font-size: 0.88rem;">Genera un archivo de respaldo con toda tu información actual y envíalo al otro celular (por Bluetooth, cable o mensaje).</p>
+                <h3 style="margin-top:0; font-size: 1rem; color: #8e44ad;">Paso 1: Exportar Respaldo</h3>
+                <p style="font-size: 0.88rem;">Crea un archivo con todo el inventario y ventas para pasarlo a otro dispositivo.</p>
                 <button type="button" class="btn-sync" onclick="exportarBackupTotal()">💾 Descargar Respaldo Total (.json)</button>
             </div>
 
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2980b9;">
-                <h3 style="margin-top:0; font-size: 1rem; color: #2980b9;">Paso 2: Importar en el Celular Destino</h3>
-                <p style="font-size: 0.88rem;">Selecciona el archivo de respaldo que trajiste del otro celular para actualizar toda la aplicación.</p>
+                <h3 style="margin-top:0; font-size: 1rem; color: #2980b9;">Paso 2: Importar Respaldo</h3>
+                <p style="font-size: 0.88rem;">Selecciona un archivo de respaldo guardado previamente para cargar la información.</p>
                 <input type="file" id="input-archivo-backup" accept=".json" style="margin-bottom: 8px;">
                 <button type="button" class="btn-info" onclick="importarBackupTotal()">📥 Cargar y Sincronizar Datos</button>
             </div>
@@ -291,11 +291,62 @@
     </div>
 
     <script>
-        let productos = JSON.parse(localStorage.getItem('pos_pro_productos')) || {};
-        let ventasDelDia = JSON.parse(localStorage.getItem('pos_pro_ventas')) || [];
-        let historialMensual = JSON.parse(localStorage.getItem('pos_pro_cortes_mensuales')) || [];
+        // CONFIGURACIÓN DE INDEXEDDB PARA ALMACENAMIENTO MASIVO EN EL TELÉFONO
+        let db;
+        let productos = {};
+        let ventasDelDia = [];
+        let historialMensual = [];
         let ultimaVentaRealizada = null;
         let carrito = [];
+
+        const request = indexedDB.open('PuntoVentaProDB', 1);
+
+        request.onerror = function(event) {
+            console.error("Error al abrir la base de datos en el teléfono:", event);
+            alert("Advertencia: No se pudo abrir el almacenamiento interno avanzado.");
+        };
+
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            cargarDatosDesdeDB();
+        };
+
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains('almacen')) {
+                db.createObjectStore('almacen');
+            }
+        };
+
+        function guardarEnDB(clave, valor, callback) {
+            if (!db) return;
+            const transaction = db.transaction(['almacen'], 'readwrite');
+            const store = transaction.objectStore('almacen');
+            const request = store.put(valor, clave);
+            request.onsuccess = function() {
+                if (callback) callback();
+            };
+        }
+
+        function cargarDatosDesdeDB() {
+            const transaction = db.transaction(['almacen'], 'readonly');
+            const store = transaction.objectStore('almacen');
+
+            store.get('productos').onsuccess = function(e) {
+                productos = e.target.result || {};
+                actualizarTablaProductos();
+                actualizarListaSugerencias();
+            };
+
+            store.get('ventasDelDia').onsuccess = function(e) {
+                ventasDelDia = e.target.result || [];
+                actualizarVistaCorte();
+            };
+
+            store.get('historialMensual').onsuccess = function(e) {
+                historialMensual = e.target.result || [];
+            };
+        }
 
         function cambiarPestana(idSeccion, boton) {
             document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
@@ -318,8 +369,8 @@
                 const img = new Image();
                 img.onload = function () {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 200;
-                    const MAX_HEIGHT = 200;
+                    const MAX_WIDTH = 250;
+                    const MAX_HEIGHT = 250;
                     let width = img.width;
                     let height = img.height;
 
@@ -340,7 +391,7 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    const dataurl = canvas.toDataURL('image/jpeg', 0.7);
+                    const dataurl = canvas.toDataURL('image/jpeg', 0.8);
                     callback(dataurl);
                 }
                 img.src = e.target.result;
@@ -370,21 +421,21 @@
 
         function guardarYActualizarProducto(codigo, nombre, costo, precio, stock, imagen, formulario) {
             productos[codigo] = { nombre, costo, precio, stock, imagen };
-            guardarProductos();
+            guardarProductosDB();
             actualizarTablaProductos();
             actualizarListaSugerencias();
             formulario.reset();
-            alert('Producto guardado correctamente.');
+            alert('Producto guardado correctamente en la memoria del teléfono.');
         }
 
-        function guardarProductos() {
-            localStorage.setItem('pos_pro_productos', JSON.stringify(productos));
+        function guardarProductosDB() {
+            guardarEnDB('productos', productos);
         }
 
         function eliminarProducto(codigo) {
             if (confirm(`¿Estás seguro de eliminar el producto con código "${codigo}"?`)) {
                 delete productos[codigo];
-                guardarProductos();
+                guardarProductosDB();
                 actualizarTablaProductos();
                 actualizarListaSugerencias();
                 alert('Producto eliminado del inventario.');
@@ -532,7 +583,7 @@
             carrito.forEach(item => {
                 productos[item.codigo].stock -= item.cantidad;
             });
-            guardarProductos();
+            guardarProductosDB();
             actualizarTablaProductos();
             actualizarListaSugerencias();
 
@@ -550,7 +601,7 @@
             };
 
             ventasDelDia.push(venta);
-            localStorage.setItem('pos_pro_ventas', JSON.stringify(ventasDelDia));
+            guardarEnDB('ventasDelDia', ventasDelDia);
 
             ultimaVentaRealizada = venta;
             
@@ -648,12 +699,12 @@
                     }
                 });
 
-                guardarProductos();
+                guardarProductosDB();
                 actualizarTablaProductos();
                 actualizarListaSugerencias();
 
                 ventasDelDia.splice(index, 1);
-                localStorage.setItem('pos_pro_ventas', JSON.stringify(ventasDelDia));
+                guardarEnDB('ventasDelDia', ventasDelDia);
                 actualizarVistaCorte();
             }
         }
@@ -680,19 +731,18 @@
                 };
 
                 historialMensual.push(registroCorte);
-                localStorage.setItem('pos_pro_cortes_mensuales', JSON.stringify(historialMensual));
+                guardarEnDB('historialMensual', historialMensual);
 
                 ventasDelDia = [];
-                ultimaVentaRealizada = null;
+                guardarEnDB('ventasDelDia', ventasDelDia);
                 
+                ultimaVentaRealizada = null;
                 const btnImprimir = document.getElementById('btn-imprimir-ultimo');
                 btnImprimir.disabled = true;
                 btnImprimir.classList.remove('btn-info');
                 btnImprimir.classList.add('btn-secondary');
 
-                localStorage.removeItem('pos_pro_ventas');
                 actualizarVistaCorte();
-
                 alert('Caja cerrada con éxito. Registro guardado en el mes.');
             }
         }
@@ -772,7 +822,6 @@
             document.body.removeChild(link);
         }
 
-        // FUNCIONES DE SINCRONIZACIÓN OFFLINE ENTRE CELULARES
         function exportarBackupTotal() {
             const dataBackup = {
                 productos: productos,
@@ -808,22 +857,22 @@
 
                     if (datosImportados.productos) {
                         productos = datosImportados.productos;
-                        localStorage.setItem('pos_pro_productos', JSON.stringify(productos));
+                        guardarEnDB('productos', productos);
                     }
                     if (datosImportados.ventasDelDia) {
                         ventasDelDia = datosImportados.ventasDelDia;
-                        localStorage.setItem('pos_pro_ventas', JSON.stringify(ventasDelDia));
+                        guardarEnDB('ventasDelDia', ventasDelDia);
                     }
                     if (datosImportados.historialMensual) {
                         historialMensual = datosImportados.historialMensual;
-                        localStorage.setItem('pos_pro_cortes_mensuales', JSON.stringify(historialMensual));
+                        guardarEnDB('historialMensual', historialMensual);
                     }
 
                     actualizarTablaProductos();
                     actualizarListaSugerencias();
                     actualizarVistaCorte();
 
-                    alert('¡Sincronización exitosa! Todos los datos y productos han sido actualizados en este dispositivo.');
+                    alert('¡Sincronización exitosa! Todos los datos y productos han sido actualizados en la memoria interna.');
                 } catch (error) {
                     alert('El archivo seleccionado no es válido o está dañado.');
                 }
@@ -831,10 +880,6 @@
 
             reader.readAsText(archivo);
         }
-
-        actualizarTablaProductos();
-        actualizarListaSugerencias();
-        actualizarVistaCorte();
     </script>
 </body>
 </html>

@@ -78,6 +78,29 @@
             border-radius: 4px;
             border: 1px solid #ccc;
         }
+
+        /* DISEÑO EXCLUSIVO PARA EL TICKET FÍSICO AL IMPRIMIR */
+        #ticket-impresion { display: none; }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #ticket-impresion, #ticket-impresion * {
+                visibility: visible;
+            }
+            #ticket-impresion {
+                display: block;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 58mm;
+                font-family: 'Courier New', monospace;
+                font-size: 11px;
+                color: #000;
+                padding: 2px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -91,6 +114,23 @@
         <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">3. Corte del Día</button>
         <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">4. Registro Mes</button>
         <button type="button" class="tab-btn" onclick="cambiarPestana('sec-sync', this)">5. Sincronizar</button>
+    </div>
+
+    <!-- CONTENEDOR OCULTO PARA IMPRESIÓN DIRECTA -->
+    <div id="ticket-impresion">
+        <h3 style="text-align:center; margin:0 0 5px 0; font-size:13px;">TICKET DE VENTA</h3>
+        <p style="margin:2px 0;"><strong>Fecha/Hora:</strong> <span id="t-fecha"></span></p>
+        <p style="margin:2px 0;"><strong>Pago:</strong> <span id="t-pago"></span></p>
+        <hr style="border:none; border-top:1px dashed #000; margin:4px 0;">
+        <div id="t-items"></div>
+        <hr style="border:none; border-top:1px dashed #000; margin:4px 0;">
+        <p style="font-size: 13px; font-weight: bold; margin:2px 0;">TOTAL: $<span id="t-total"></span></p>
+        <div id="t-cambio-contenedor">
+            <p style="margin:2px 0;">Recibido: $<span id="t-recibido"></span></p>
+            <p style="margin:2px 0;">Cambio: $<span id="t-cambio"></span></p>
+        </div>
+        <br>
+        <p style="text-align: center; margin:4px 0;">¡Gracias por su compra!</p>
     </div>
 
     <!-- SECCIÓN 1: VENTAS -->
@@ -250,7 +290,6 @@
 
         request.onerror = function(event) {
             console.error("Error al abrir la base de datos en el teléfono:", event);
-            alert("Advertencia: No se pudo abrir el almacenamiento interno avanzado.");
         };
 
         request.onsuccess = function(event) {
@@ -560,53 +599,28 @@
                 return;
             }
 
-            let detalleHtml = '';
+            // Rellenar datos en el contenedor oculto para impresión nativa
+            document.getElementById('t-fecha').innerText = venta.fechaHora;
+            document.getElementById('t-pago').innerText = venta.metodoPago;
+            document.getElementById('t-total').innerText = venta.totalVenta.toFixed(2);
+
+            const divItems = document.getElementById('t-items');
+            divItems.innerHTML = '';
             venta.items.forEach(i => {
-                detalleHtml += `<div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>${i.nombre} x${i.cantidad}</span> <span>$${(i.precio * i.cantidad).toFixed(2)}</span></div>`;
+                divItems.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom: 2px;"><span>${i.nombre} x${i.cantidad}</span> <span>$${(i.precio * i.cantidad).toFixed(2)}</span></div>`;
             });
 
-            const pagoInfoHTML = venta.metodoPago === 'Efectivo' 
-                ? `<p style="margin: 4px 0;">Recibido: $${venta.pagado.toFixed(2)}</p><p style="margin: 4px 0;">Cambio: $${venta.cambio.toFixed(2)}</p>` 
-                : '';
-
-            const ventanaImpresion = window.open('', '_blank', 'width=300,height=600');
-            if (!ventanaImpresion) {
-                alert('Por favor, permite las ventanas emergentes (pop-ups) en tu navegador para poder imprimir el ticket.');
-                return;
+            const contenedorCambio = document.getElementById('t-cambio-contenedor');
+            if (venta.metodoPago === 'Efectivo') {
+                contenedorCambio.style.display = 'block';
+                document.getElementById('t-recibido').innerText = venta.pagado.toFixed(2);
+                document.getElementById('t-cambio').innerText = venta.cambio.toFixed(2);
+            } else {
+                contenedorCambio.style.display = 'none';
             }
 
-            ventanaImpresion.document.write(`
-                <html>
-                    <head>
-                        <title>Ticket de Venta</title>
-                        <style>
-                            body { font-family: 'Courier New', monospace; font-size: 12px; width: 58mm; margin: 0; padding: 5px; color: #000; }
-                            h3 { text-align: center; margin: 0 0 5px 0; font-size: 14px; }
-                            p { margin: 2px 0; }
-                            hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
-                        </style>
-                    </head>
-                    <body>
-                        <h3>TICKET DE VENTA</h3>
-                        <p>Fecha/Hora: ${venta.fechaHora}</p>
-                        <p>Pago: ${venta.metodoPago}</p>
-                        <hr>
-                        ${detalleHtml}
-                        <hr>
-                        <p style="font-size: 14px; font-weight: bold;">TOTAL: $${venta.totalVenta.toFixed(2)}</p>
-                        ${pagoInfoHTML}
-                        <br>
-                        <p style="text-align: center;">¡Gracias por su compra!</p>
-                        <script>
-                            window.onload = function() {
-                                window.print();
-                                window.close();
-                            }
-                        <\/script>
-                    </body>
-                </html>
-            `);
-            ventanaImpresion.document.close();
+            // Enviar orden directa de impresión al sistema sin abrir nuevas pestañas
+            window.print();
         }
 
         function imprimirUltimaVenta() {

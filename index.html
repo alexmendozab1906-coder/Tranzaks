@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Punto de Venta e Inventario</title>
+    <!-- Librería jsPDF para generar archivos PDF optimizados para impresoras térmicas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #f1f5f9; color: #333; }
         h1 { font-size: 1.4rem; text-align: center; color: #2c3e50; margin-bottom: 15px; }
@@ -123,7 +125,7 @@
             <p style="margin: 5px 0;"><strong>Cambio:</strong> $<span id="monto-cambio">0.00</span></p>
 
             <button type="button" onclick="procesarVenta()">Completar Venta</button>
-            <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="imprimirUltimaVenta()" disabled style="margin-top: 5px;">Ver e Imprimir Último Ticket</button>
+            <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="visualizarUltimoTicketPDF()" disabled style="margin-top: 5px;">Visualizar PDF Último Ticket</button>
         </div>
     </div>
 
@@ -553,87 +555,79 @@
             alert('Venta realizada con éxito.');
         }
 
-        function abrirTicketVentana(venta) {
+        // Generación y visualización del ticket como PDF con formato de impresora térmica (58mm)
+        function generarYVisualizarPDF(venta) {
             if (!venta) {
                 alert('No hay información de venta disponible.');
                 return;
             }
 
-            let htmlItems = '';
-            venta.items.forEach(i => {
-                htmlItems += `<div style="display:flex; justify-content:space-between; margin-bottom: 4px;"><span>${i.nombre} x${i.cantidad}</span> <span>$${(i.precio * i.cantidad).toFixed(2)}</span></div>`;
+            const { jsPDF } = window.jspdf;
+            // Rollo térmico estándar de 58mm de ancho, altura calculada dinámicamente según productos
+            const alturaEstimada = 100 + (venta.items.length * 10);
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [58, alturaEstimada]
             });
 
-            let htmlCambio = '';
+            doc.setFont("courier", "normal");
+            doc.setFontSize(9);
+
+            let y = 8;
+            doc.text("TICKET DE VENTA", 29, y, { align: "center" });
+            y += 5;
+            doc.setFontSize(7.5);
+            doc.text(`Fecha: ${venta.fechaHora}`, 3, y);
+            y += 4;
+            doc.text(`Pago: ${venta.metodoPago}`, 3, y);
+            y += 4;
+            doc.text("----------------------------------------", 3, y);
+            y += 4;
+
+            venta.items.forEach(i => {
+                const subtotal = (i.precio * i.cantidad).toFixed(2);
+                doc.text(`${i.nombre} x${i.cantidad}`, 3, y);
+                y += 4;
+                doc.text(`$${subtotal}`, 55, y, { align: "right" });
+                y += 5;
+            });
+
+            doc.text("----------------------------------------", 3, y);
+            y += 5;
+            doc.setFontSize(9);
+            doc.text(`TOTAL: $${venta.totalVenta.toFixed(2)}`, 3, y);
+            y += 5;
+
             if (venta.metodoPago === 'Efectivo') {
-                htmlCambio = `
-                    <p style="margin:2px 0;">Recibido: $${venta.pagado.toFixed(2)}</p>
-                    <p style="margin:2px 0;">Cambio: $${venta.cambio.toFixed(2)}</p>
-                `;
+                doc.setFontSize(7.5);
+                doc.text(`Recibido: $${venta.pagado.toFixed(2)}`, 3, y);
+                y += 4;
+                doc.text(`Cambio: $${venta.cambio.toFixed(2)}`, 3, y);
+                y += 5;
             }
 
-            // Abre una ventana limpia con el formato del ticket y un botón de imprimir dedicado
-            const ventanaTicket = window.open('', '_blank', 'width=350,height=600');
-            ventanaTicket.document.write(`
-                <!DOCTYPE html>
-                <html lang="es">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Ticket de Venta</title>
-                    <style>
-                        body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; padding: 10px; margin: 0; background: #fff; }
-                        .ticket-box { width: 100%; max-width: 280px; margin: 0 auto; }
-                        .btn-imprimir-accion {
-                            display: block;
-                            width: 100%;
-                            background: #27ae60;
-                            color: white;
-                            border: none;
-                            padding: 12px;
-                            font-size: 14px;
-                            font-weight: bold;
-                            border-radius: 6px;
-                            cursor: pointer;
-                            margin-bottom: 15px;
-                            text-align: center;
-                        }
-                        @media print {
-                            .btn-imprimir-accion { display: none !important; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="ticket-box">
-                        <button class="btn-imprimir-accion" onclick="window.print()">🖨️ IMPRIMIR ESTE TICKET</button>
-                        <h3 style="text-align:center; margin:0 0 5px 0; font-size:14px;">TICKET DE VENTA</h3>
-                        <p style="margin:2px 0;"><strong>Fecha/Hora:</strong> ${venta.fechaHora}</p>
-                        <p style="margin:2px 0;"><strong>Pago:</strong> ${venta.metodoPago}</p>
-                        <hr style="border:none; border-top:1px dashed #000; margin:6px 0;">
-                        ${htmlItems}
-                        <hr style="border:none; border-top:1px dashed #000; margin:6px 0;">
-                        <p style="font-size: 14px; font-weight: bold; margin:2px 0;">TOTAL: $${venta.totalVenta.toFixed(2)}</p>
-                        ${htmlCambio}
-                        <br>
-                        <p style="text-align: center; margin:4px 0;">¡Gracias por su compra!</p>
-                    </div>
-                </body>
-                </html>
-            `);
-            ventanaTicket.document.close();
+            y += 3;
+            doc.text("¡Gracias por su compra!", 29, y, { align: "center" });
+
+            // Crear Blob URL para visualizar el archivo PDF en una nueva pestaña
+            const pdfBlob = doc.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, '_blank');
         }
 
-        function imprimirUltimaVenta() {
+        function visualizarUltimoTicketPDF() {
             if (ultimaVentaRealizada) {
-                abrirTicketVentana(ultimaVentaRealizada);
+                generarYVisualizarPDF(ultimaVentaRealizada);
             } else {
                 alert('Aún no has procesado ninguna venta en esta sesión.');
             }
         }
 
-        function imprimirVentaPorIndice(index) {
+        function visualizarVentaPorIndicePDF(index) {
             const venta = ventasDelDia[index];
             if (venta) {
-                abrirTicketVentana(venta);
+                generarYVisualizarPDF(venta);
             }
         }
 
@@ -654,7 +648,7 @@
                         <td>$${v.totalVenta.toFixed(2)}</td>
                         <td>${v.metodoPago}</td>
                         <td>
-                            <button type="button" class="btn-info" style="padding:2px 5px; width:auto;" onclick="imprimirVentaPorIndice(${index})">🖨️</button>
+                            <button type="button" class="btn-info" style="padding:2px 5px; width:auto;" onclick="visualizarVentaPorIndicePDF(${index})">👁️ PDF</button>
                             <button type="button" class="btn-danger" style="padding:2px 5px; width:auto;" onclick="cancelarVenta(${index})">X</button>
                         </td>
                     </tr>`;

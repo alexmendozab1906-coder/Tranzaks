@@ -82,7 +82,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             display: flex;
             align-items: center;
-            justify-content: space-between; /* Permite separar el título a la izquierda y el botón a la derecha */
+            justify-content: space-between;
         }
         
         /* BOTÓN DE MENÚ UBICADO A LA DERECHA */
@@ -177,6 +177,7 @@
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">5. Corte</button>
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">6. Mes</button>
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-nube', this)">☁️ 7. Nube</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-reiniciar', this)">🔄 8. Reiniciar</button>
         </div>
     </div>
 
@@ -385,6 +386,33 @@
                     </div>
                 </div>
             </div>
+
+            <!-- SECCIÓN 8: REINICIAR / GESTIÓN DE SEGURIDAD Y NUBE -->
+            <div id="sec-reiniciar" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h2>🔄 Reiniciar y Restauración de Datos</h2>
+                    <p style="font-size: 0.9rem; color: #555;">
+                        Administra el restablecimiento de tu aplicación mediante tu NIP de seguridad configurado.
+                    </p>
+
+                    <div id="contenedor-config-nip" style="background: #f8fafc; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                        <h3 style="font-size: 0.95rem; margin-top:0;">Configuración de NIP de Seguridad</h3>
+                        <p id="lbl-estado-nip" style="font-size: 0.85rem; color: #e74c3c;">Estado: NIP no configurado.</p>
+                        <input type="password" id="nuevo-nip" placeholder="Crear o cambiar NIP (Ej. 1234)">
+                        <button type="button" class="btn-info" onclick="guardarNIP()">Guardar / Actualizar NIP</button>
+                    </div>
+
+                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+
+                    <label>Ingresa tu NIP de seguridad:</label>
+                    <input type="password" id="nip-ingresado" placeholder="Introduce tu NIP">
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                        <button type="button" class="btn-danger" onclick="reiniciarAppConRespaldo()">⚠️ Respaldar en Nube y Borrar Celular</button>
+                        <button type="button" class="btn-info" onclick="descargarEInsertarDesdeNubeConNIP()">📥 Descargar Respaldo de la Nube e Insertar</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -396,6 +424,7 @@
         let historialMensual = [];
         let ultimaVentaRealizada = null;
         let carrito = [];
+        let nipSeguridad = "";
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -434,6 +463,124 @@
             store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); };
             store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; };
             store.get('nubeUrl').onsuccess = (e) => { if(e.target.result) document.getElementById('nube-database-url').value = e.target.result; };
+            store.get('nipSeguridad').onsuccess = (e) => { 
+                nipSeguridad = e.target.result || ""; 
+                actualizarInterfazNIP();
+            };
+        }
+
+        function actualizarInterfazNIP() {
+            const lbl = document.getElementById('lbl-estado-nip');
+            if (nipSeguridad) {
+                lbl.innerText = "Estado: NIP configurado correctamente.";
+                lbl.style.color = "#27ae60";
+            } else {
+                lbl.innerText = "Estado: NIP no configurado. (Establece uno antes de usar las acciones de seguridad)";
+                lbl.style.color = "#e74c3c";
+            }
+        }
+
+        function guardarNIP() {
+            const val = document.getElementById('nuevo-nip').value.trim();
+            if (!val) return alert('Escribe un NIP válido.');
+            nipSeguridad = val;
+            guardarEnDB('nipSeguridad', nipSeguridad, () => {
+                actualizarInterfazNIP();
+                document.getElementById('nuevo-nip').value = '';
+                alert('¡NIP de seguridad guardado con éxito!');
+            });
+        }
+
+        function reiniciarAppConRespaldo() {
+            const nipIngresado = document.getElementById('nip-ingresado').value.trim();
+            if (!nipSeguridad) return alert('Primero debes configurar un NIP de seguridad en esta misma sección.');
+            if (nipIngresado !== nipSeguridad) return alert('NIP incorrecto. No se pueden borrar los datos.');
+
+            const url = document.getElementById('nube-database-url').value.trim();
+            if (!url) return alert('Debes configurar la URL de tu base de datos de Firebase en la sección Nube para poder respaldar antes de borrar.');
+
+            if (!confirm('¿Estás totalmente seguro? Se subirá el respaldo a la nube y se limpiará por completo la información de este dispositivo.')) return;
+
+            // 1. Subir a la nube primero
+            const datos = { productos, clientes, ventasDelDia, historialMensual };
+            fetch(`${url}/datosPOS.json`, {
+                method: 'PUT',
+                body: JSON.stringify(datos),
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => {
+                if(res.ok) {
+                    // 2. Si se subió con éxito, limpiar almacenamiento local de IndexedDB
+                    const transaction = db.transaction(['almacen'], 'readwrite');
+                    const store = transaction.objectStore('almacen');
+                    const clearReq = store.clear();
+                    
+                    clearReq.onsuccess = () => {
+                        productos = {};
+                        clientes = {};
+                        ventasDelDia = [];
+                        historialMensual = [];
+                        carrito = [];
+                        nipSeguridad = "";
+                        
+                        // Recargar vistas locales
+                        actualizarTablaProductos();
+                        actualizarListaSugerencias();
+                        actualizarTablaClientes();
+                        actualizarSelectClientes();
+                        actualizarVistaCorte();
+                        actualizarVistaBalance();
+                        actualizarInterfazNIP();
+                        document.getElementById('nip-ingresado').value = '';
+                        
+                        alert('✅ Respaldo subido a la nube con éxito y datos del celular limpiados correctamente.');
+                        cambiarPestana('sec-ventas', document.querySelector('.tab-btn'));
+                    };
+                } else {
+                    alert('Error al respaldar en la nube. No se borró nada del dispositivo.');
+                }
+            })
+            .catch(err => alert('Error de conexión con la nube: ' + err));
+        }
+
+        function descargarEInsertarDesdeNubeConNIP() {
+            const nipIngresado = document.getElementById('nip-ingresado').value.trim();
+            if (!nipSeguridad) return alert('Primero debes configurar un NIP de seguridad.');
+            if (nipIngresado !== nipSeguridad) return alert('NIP incorrecto. Acción denegada.');
+
+            const url = document.getElementById('nube-database-url').value.trim();
+            if (!url) return alert('Ingresa o configura primero la URL de tu base de datos en la nube (Sección Nube).');
+
+            if (!confirm('¿Deseas descargar los datos de la nube e insertarlos/sobrescribir la información actual en este celular?')) return;
+
+            fetch(`${url}/datosPOS.json`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data) return alert('No hay datos disponibles en la nube para descargar.');
+                
+                productos = data.productos || {};
+                clientes = data.clientes || {};
+                ventasDelDia = data.ventasDelDia || [];
+                historialMensual = data.historialMensual || [];
+
+                // Guardar en la base de datos local
+                guardarEnDB('productos', productos);
+                guardarEnDB('clientes', clientes);
+                guardarEnDB('ventasDelDia', ventasDelDia);
+                guardarEnDB('historialMensual', historialMensual);
+
+                // Refrescar todas las pantallas de la aplicación
+                actualizarTablaProductos();
+                actualizarListaSugerencias();
+                actualizarTablaClientes();
+                actualizarSelectClientes();
+                actualizarVistaCorte();
+                actualizarVistaBalance();
+                document.getElementById('nip-ingresado').value = '';
+
+                alert('✅ ¡Datos descargados e insertados con éxito en la aplicación!');
+            })
+            .catch(err => alert('Error al conectar con la nube: ' + err));
         }
 
         function cambiarPestana(idSeccion, boton) {

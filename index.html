@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta con Menú Lateral Desplegable</title>
+    <title>Punto de Venta con Google Drive</title>
     <!-- Librería jsPDF para tickets -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Firebase SDK (Realtime Database) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f1f5f9; color: #333; display: flex; height: 100vh; overflow: hidden; }
         
@@ -176,7 +173,7 @@
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-productos', this)">4. Productos</button>
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">5. Corte</button>
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">6. Mes</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-nube', this)">☁️ 7. Nube</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-nube', this)">☁️ 7. Google Drive</button>
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-reiniciar', this)">🔄 8. Reiniciar</button>
         </div>
     </div>
@@ -369,25 +366,25 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN 7: NUBE OPCIONAL -->
+            <!-- SECCIÓN 7: GOOGLE DRIVE (APPS SCRIPT) -->
             <div id="sec-nube" class="tab-content" style="display: none;">
                 <div class="card">
-                    <h2>Sincronización Opcional con la Nube</h2>
+                    <h2>Sincronización con Google Drive</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Por defecto, tus datos se guardan en el navegador. Si deseas respaldar tu información en la nube, ingresa las credenciales de Firebase y usa los botones de sincronización.
+                        Pega aquí la URL web de tu Google Apps Script para respaldar tus datos directamente en tu cuenta de Google Drive.
                     </p>
 
-                    <label>Firebase Database URL:</label>
-                    <input type="text" id="nube-database-url" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com">
+                    <label>URL de Google Apps Script:</label>
+                    <input type="text" id="nube-database-url" placeholder="https://script.google.com/macros/s/.../exec">
                     
                     <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <button type="button" class="btn-cloud" onclick="subirALaNube()">☁️ Subir Datos a la Nube</button>
-                        <button type="button" class="btn-info" onclick="descargarDeLaNube()">📥 Descargar de la Nube</button>
+                        <button type="button" class="btn-cloud" onclick="subirALaNube()">☁️ Subir a Google Drive</button>
+                        <button type="button" class="btn-info" onclick="descargarDeLaNube()">📥 Descargar de Google Drive</button>
                     </div>
                 </div>
             </div>
 
-            <!-- SECCIÓN 8: REINICIAR / GESTIÓN DE SEGURIDAD Y NUBE -->
+            <!-- SECCIÓN 8: REINICIAR / GESTIÓN DE SEGURIDAD Y GOOGLE DRIVE -->
             <div id="sec-reiniciar" class="tab-content" style="display: none;">
                 <div class="card">
                     <h2>🔄 Reiniciar y Restauración de Datos</h2>
@@ -408,8 +405,8 @@
                     <input type="password" id="nip-ingresado" placeholder="Introduce tu NIP">
                     
                     <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
-                        <button type="button" class="btn-danger" onclick="reiniciarAppConRespaldo()">⚠️ Respaldar en Nube y Borrar Celular</button>
-                        <button type="button" class="btn-info" onclick="descargarEInsertarDesdeNubeConNIP()">📥 Descargar Respaldo de la Nube e Insertar</button>
+                        <button type="button" class="btn-danger" onclick="reiniciarAppConRespaldo()">⚠️ Respaldar en Google Drive y Borrar Celular</button>
+                        <button type="button" class="btn-info" onclick="descargarEInsertarDesdeNubeConNIP()">📥 Descargar Respaldo de Google Drive e Insertar</button>
                     </div>
                 </div>
             </div>
@@ -436,7 +433,7 @@
         }
 
         // Inicializar Base de Datos local (IndexedDB)
-        const request = indexedDB.open('PuntoVentaNubeDB', 2);
+        const request = indexedDB.open('PuntoVentaDriveDB', 2);
         request.onsuccess = function(event) {
             db = event.target.result;
             cargarDatosDesdeDB();
@@ -497,20 +494,18 @@
             if (nipIngresado !== nipSeguridad) return alert('NIP incorrecto. No se pueden borrar los datos.');
 
             const url = document.getElementById('nube-database-url').value.trim();
-            if (!url) return alert('Debes configurar la URL de tu base de datos de Firebase en la sección Nube para poder respaldar antes de borrar.');
+            if (!url) return alert('Debes configurar la URL de tu Google Apps Script para poder respaldar antes de borrar.');
 
-            if (!confirm('¿Estás totalmente seguro? Se subirá el respaldo a la nube y se limpiará por completo la información de este dispositivo.')) return;
+            if (!confirm('¿Estás totalmente seguro? Se subirá el respaldo a tu Google Drive y se limpiará por completo la información de este dispositivo.')) return;
 
-            // 1. Subir a la nube primero
             const datos = { productos, clientes, ventasDelDia, historialMensual };
-            fetch(`${url}/datosPOS.json`, {
-                method: 'PUT',
-                body: JSON.stringify(datos),
-                headers: { 'Content-Type': 'application/json' }
+            fetch(url, {
+                method: 'POST',
+                body: JSON.stringify(datos)
             })
-            .then(res => {
-                if(res.ok) {
-                    // 2. Si se subió con éxito, limpiar almacenamiento local de IndexedDB
+            .then(res => res.json())
+            .then(response => {
+                if(response.status === "success") {
                     const transaction = db.transaction(['almacen'], 'readwrite');
                     const store = transaction.objectStore('almacen');
                     const clearReq = store.clear();
@@ -523,7 +518,6 @@
                         carrito = [];
                         nipSeguridad = "";
                         
-                        // Recargar vistas locales
                         actualizarTablaProductos();
                         actualizarListaSugerencias();
                         actualizarTablaClientes();
@@ -533,14 +527,14 @@
                         actualizarInterfazNIP();
                         document.getElementById('nip-ingresado').value = '';
                         
-                        alert('✅ Respaldo subido a la nube con éxito y datos del celular limpiados correctamente.');
+                        alert('✅ Respaldo subido a Google Drive con éxito y datos del celular limpiados correctamente.');
                         cambiarPestana('sec-ventas', document.querySelector('.tab-btn'));
                     };
                 } else {
-                    alert('Error al respaldar en la nube. No se borró nada del dispositivo.');
+                    alert('Error al respaldar en Google Drive. No se borró nada del dispositivo.');
                 }
             })
-            .catch(err => alert('Error de conexión con la nube: ' + err));
+            .catch(err => alert('Error de conexión con Google Drive: ' + err));
         }
 
         function descargarEInsertarDesdeNubeConNIP() {
@@ -549,27 +543,25 @@
             if (nipIngresado !== nipSeguridad) return alert('NIP incorrecto. Acción denegada.');
 
             const url = document.getElementById('nube-database-url').value.trim();
-            if (!url) return alert('Ingresa o configura primero la URL de tu base de datos en la nube (Sección Nube).');
+            if (!url) return alert('Ingresa o configura primero la URL de tu Google Apps Script.');
 
-            if (!confirm('¿Deseas descargar los datos de la nube e insertarlos/sobrescribir la información actual en este celular?')) return;
+            if (!confirm('¿Deseas descargar los datos de Google Drive e insertarlos/sobrescribir la información actual en este celular?')) return;
 
-            fetch(`${url}/datosPOS.json`)
+            fetch(url)
             .then(res => res.json())
             .then(data => {
-                if (!data) return alert('No hay datos disponibles en la nube para descargar.');
+                if (!data || Object.keys(data).length === 0) return alert('No hay datos disponibles en Google Drive para descargar.');
                 
                 productos = data.productos || {};
                 clientes = data.clientes || {};
                 ventasDelDia = data.ventasDelDia || [];
                 historialMensual = data.historialMensual || [];
 
-                // Guardar en la base de datos local
                 guardarEnDB('productos', productos);
                 guardarEnDB('clientes', clientes);
                 guardarEnDB('ventasDelDia', ventasDelDia);
                 guardarEnDB('historialMensual', historialMensual);
 
-                // Refrescar todas las pantallas de la aplicación
                 actualizarTablaProductos();
                 actualizarListaSugerencias();
                 actualizarTablaClientes();
@@ -578,9 +570,9 @@
                 actualizarVistaBalance();
                 document.getElementById('nip-ingresado').value = '';
 
-                alert('✅ ¡Datos descargados e insertados con éxito en la aplicación!');
+                alert('✅ ¡Datos descargados e insertados con éxito desde Google Drive!');
             })
-            .catch(err => alert('Error al conectar con la nube: ' + err));
+            .catch(err => alert('Error al conectar con Google Drive: ' + err));
         }
 
         function cambiarPestana(idSeccion, boton) {
@@ -595,7 +587,6 @@
             seccionActiva.classList.add('active');
             boton.classList.add('active');
 
-            // Cerrar menú automáticamente en móviles al seleccionar una opción
             if (window.innerWidth <= 768) {
                 document.getElementById('sidebar').classList.remove('open');
             }
@@ -895,34 +886,38 @@
             document.getElementById('mes-total-ganancias').innerText = gan.toFixed(2);
         }
 
-        // FUNCIONES DE NUBE (OPCIONAL)
+        // FUNCIONES DE GOOGLE DRIVE (APPS SCRIPT)
         function subirALaNube() {
             const url = document.getElementById('nube-database-url').value.trim();
-            if (!url) return alert('Ingresa la URL de tu base de datos en la nube.');
+            if (!url) return alert('Ingresa la URL de tu Google Apps Script.');
             guardarEnDB('nubeUrl', url);
 
             const datos = { productos, clientes, ventasDelDia, historialMensual };
-            fetch(`${url}/datosPOS.json`, {
-                method: 'PUT',
-                body: JSON.stringify(datos),
-                headers: { 'Content-Type': 'application/json' }
+            fetch(url, {
+                method: 'POST',
+                body: JSON.stringify(datos)
             })
-            .then(res => {
-                if(res.ok) alert('¡Datos subidos a la nube correctamente!');
-                else alert('Error al subir los datos.');
+            .then(res => res.json())
+            .then(response => {
+                if(response.status === "success") {
+                    alert('¡Datos respaldados en Google Drive correctamente!');
+                } else {
+                    alert('Error al guardar en Google Drive: ' + (response.message || 'Desconocido'));
+                }
             })
-            .catch(err => alert('Error de conexión con la nube: ' + err));
+            .catch(err => alert('Error de conexión: ' + err));
         }
 
         function descargarDeLaNube() {
             const url = document.getElementById('nube-database-url').value.trim();
-            if (!url) return alert('Ingresa la URL de tu base de datos en la nube.');
+            if (!url) return alert('Ingresa la URL de tu Google Apps Script.');
             guardarEnDB('nubeUrl', url);
 
-            fetch(`${url}/datosPOS.json`)
+            fetch(url)
             .then(res => res.json())
             .then(data => {
-                if (!data) return alert('No hay datos guardados en la nube.');
+                if (!data || Object.keys(data).length === 0) return alert('No hay datos guardados en Google Drive.');
+                
                 productos = data.productos || {};
                 clientes = data.clientes || {};
                 ventasDelDia = data.ventasDelDia || [];
@@ -939,7 +934,7 @@
                 actualizarSelectClientes();
                 actualizarVistaCorte();
                 actualizarVistaBalance();
-                alert('¡Datos descargados y sincronizados desde la nube con éxito!');
+                alert('¡Datos descargados e insertados desde Google Drive con éxito!');
             })
             .catch(err => alert('Error al descargar: ' + err));
         }

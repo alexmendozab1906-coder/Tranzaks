@@ -3,1079 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta e Inventario</title>
-    <!-- Librería jsPDF para generar archivos PDF optimizados para impresoras térmicas -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <title>Registro de Clientes</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #f1f5f9; color: #333; }
-        h1 { font-size: 1.4rem; text-align: center; color: #2c3e50; margin-bottom: 15px; }
-        .nav-tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
-        .tab-btn {
-            min-width: 80px;
-            padding: 8px 6px;
-            background: transparent;
-            color: #475569;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 0.73rem;
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s;
-            white-space: nowrap;
-        }
-        .tab-btn.active {
-            background-color: #2c3e50;
-            color: white;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-        }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .card {
-            background: #ffffff;
+        .client-section {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            max-width: 800px;
-            margin: 0 auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
         }
-        h2 { font-size: 1.2rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; margin-top: 0; }
-        input, select, button {
-            width: 100%;
+        .client-section h2 {
+            text-align: center;
+            color: #333;
+        }
+        .client-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .form-group label {
+            font-weight: bold;
+            color: #555;
+        }
+        .form-group input {
             padding: 10px;
-            margin: 6px 0;
             border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            box-sizing: border-box;
+            border-radius: 4px;
+            font-size: 14px;
         }
-        button {
-            background-color: #27ae60;
+        .btn-submit {
+            padding: 10px;
+            background-color: #007bff;
             color: white;
             border: none;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover { background-color: #219150; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        .btn-danger { background-color: #e74c3c; }
-        .btn-danger:hover { background-color: #c0392b; }
-        .btn-info { background-color: #2980b9; }
-        .btn-info:hover { background-color: #2471a3; }
-        .btn-secondary { background-color: #7f8c8d; }
-        .btn-secondary:hover { background-color: #6c757d; }
-        .btn-excel { background-color: #107c41; }
-        .btn-excel:hover { background-color: #0b5329; }
-        .btn-sync { background-color: #8e44ad; }
-        .btn-sync:hover { background-color: #732d91; }
-        .btn-email { background-color: #d35400; }
-        .btn-email:hover { background-color: #ba4a00; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
-        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: middle; }
-        th { background-color: #f8fafc; color: #475569; }
-        .monto-total { font-size: 1.5rem; color: #2c3e50; font-weight: bold; text-align: right; margin: 10px 0; }
-        .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
-        .corte-resumen p { margin: 6px 0; font-size: 1rem; }
-        .img-preview-table {
-            width: 40px;
-            height: 40px;
-            object-fit: cover;
             border-radius: 4px;
-            border: 1px solid #ccc;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .btn-submit:hover {
+            background-color: #0056b3;
+        }
+        .client-table-container {
+            overflow-x: auto;
+        }
+        .client-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+        .client-table th, .client-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .client-table th {
+            background-color: #007bff;
+            color: white;
+        }
+        .client-table tr:hover {
+            background-color: #f1f1f1;
         }
     </style>
 </head>
 <body>
 
-    <h1>Punto de Venta e Inventario</h1>
-
-    <!-- BARRA DE NAVEGACIÓN -->
-    <div class="nav-tabs">
-        <button type="button" class="tab-btn active" onclick="cambiarPestana('sec-ventas', this)">1. Ventas</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-clientes', this)">2. Clientes</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-balance', this)">3. Balance</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-productos', this)">4. Productos</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">5. Corte</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">6. Mes</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-sync', this)">7. Sync</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-correo', this)">8. Correo</button>
-    </div>
-
-    <!-- SECCIÓN 1: VENTAS -->
-    <div id="sec-ventas" class="tab-content active">
-        <div class="card">
-            <h2>Registro de Venta</h2>
+    <div class="client-section">
+        <h2>Registro de Clientes</h2>
+        
+        <!-- Formulario de Registro -->
+        <form id="clientForm" class="client-form">
+            <div class="form-group">
+                <label for="clientName">Nombre del Cliente:</label>
+                <input type="text" id="clientName" required placeholder="Ej. Juan Pérez">
+            </div>
             
-            <label>Cliente:</label>
-            <select id="venta-cliente">
-                <option value="Público General">Público General</option>
-            </select>
-
-            <form id="form-venta" style="margin-top: 10px;">
-                <input type="text" id="venta-busqueda" list="lista-sugerencias-productos" placeholder="Escribe el nombre o escanea el código" required autocomplete="off">
-                <datalist id="lista-sugerencias-productos"></datalist>
-                <button type="submit" class="btn-info">Agregar Producto</button>
-            </form>
-
-            <div style="max-height: 200px; overflow-y: auto; margin-top:10px;">
-                <table id="tabla-carrito">
-                    <thead>
-                        <tr><th>Producto</th><th>Cant.</th><th>Subtotal</th><th>Acción</th></tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+            <div class="form-group">
+                <label for="clientPhone">Número Telefónico:</label>
+                <input type="tel" id="clientPhone" required placeholder="Ej. 8112345678">
             </div>
-
-            <div class="monto-total">Total: $<span id="total-venta">0.00</span></div>
-
-            <label>Forma de Pago:</label>
-            <select id="metodo-pago" onchange="cambiarMetodoPago()">
-                <option value="Efectivo">Efectivo</option>
-                <option value="Transferencia">Transferencia</option>
-                <option value="Tarjeta">Tarjeta</option>
-            </select>
-
-            <div id="contenedor-efectivo">
-                <input type="number" step="0.01" id="monto-pagado" placeholder="Monto Recibido ($)" oninput="calcularCambio()">
-                <p style="margin: 5px 0;"><strong>Cambio:</strong> $<span id="monto-cambio">0.00</span></p>
-            </div>
-
-            <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta</button>
-            <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="visualizarUltimoTicketPDF()" disabled style="margin-top: 5px;">Visualizar PDF Último Ticket</button>
-        </div>
-    </div>
-
-    <!-- SECCIÓN 2: CLIENTES -->
-    <div id="sec-clientes" class="tab-content">
-        <div class="card">
-            <h2>Catálogo de Clientes</h2>
-            <form id="form-cliente">
-                <input type="text" id="cli-nombre" placeholder="Nombre completo o razón social" required>
-                <input type="text" id="cli-telefono" placeholder="Número telefónico" required>
-                <button type="submit">Guardar Cliente</button>
-            </form>
-
-            <h3 style="margin-top:20px; font-size: 1rem;">Lista de Clientes</h3>
-            <div style="max-height: 250px; overflow-y: auto;">
-                <table id="tabla-clientes">
-                    <thead>
-                        <tr><th>Nombre</th><th>Teléfono</th><th>Acción</th></tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- SECCIÓN 3: BALANCE DEL DÍA -->
-    <div id="sec-balance" class="tab-content">
-        <div class="card">
-            <h2>Balance General del Día (Pre-Corte)</h2>
-            <button type="button" onclick="actualizarVistaBalance()" class="btn-info">Actualizar Balance</button>
             
-            <div class="corte-resumen">
-                <p><strong>Total Ingresos del Día:</strong> $<span id="balance-ingresos">0.00</span></p>
-                <p><strong>Total Costo de Producto:</strong> $<span id="balance-egresos">0.00</span></p>
-                <hr>
-                <p style="color: #27ae60; font-size: 1.2rem;"><strong>Ganancia Neta Actual:</strong> $<span id="balance-ganancia">0.00</span></p>
-            </div>
+            <button type="submit" class="btn-submit">Registrar Cliente</button>
+        </form>
 
-            <h3 style="font-size: 1rem; margin-top: 15px;">Desglose por Producto Vendido Hoy</h3>
-            <div style="max-height: 220px; overflow-y: auto;">
-                <table id="tabla-balance-productos">
-                    <thead>
-                        <tr><th>Producto</th><th>Cant. Vendida</th><th>Ingreso Total</th><th>Costo de Producto</th><th>Ganancia Neta</th></tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- SECCIÓN 4: PRODUCTOS -->
-    <div id="sec-productos" class="tab-content">
-        <div class="card">
-            <h2>Registro de Productos</h2>
-            <form id="form-producto">
-                <input type="text" id="prod-codigo" placeholder="Código de barras / ID" required>
-                <input type="text" id="prod-nombre" placeholder="Nombre del producto" required>
-                <div style="display: flex; gap: 8px;">
-                    <input type="number" step="0.01" id="prod-costo" placeholder="Costo de producto ($)" required>
-                    <input type="number" step="0.01" id="prod-precio" placeholder="Precio ($)" required>
-                </div>
-                <input type="number" id="prod-stock" placeholder="Cantidad Inicial (Stock)" required>
-                
-                <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto (.jpg, .png):</label>
-                <input type="file" id="prod-imagen" accept=".jpg, .jpeg, .png, image/*">
-
-                <button type="submit">Guardar / Actualizar Producto</button>
-            </form>
-
-            <h3 style="margin-top:20px; font-size: 1rem;">Inventario Actual</h3>
-            <div style="max-height: 250px; overflow-y: auto;">
-                <table id="tabla-productos">
-                    <thead>
-                        <tr><th>Img</th><th>Código</th><th>Prod.</th><th>Costo</th><th>Precio</th><th>Stock</th><th>Acción</th></tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- SECCIÓN 5: CORTE DEL DÍA -->
-    <div id="sec-corte" class="tab-content">
-        <div class="card">
-            <h2>Corte de Caja y Ganancias del Día</h2>
-            <button type="button" onclick="actualizarVistaCorte()" class="btn-info">Actualizar Corte</button>
-            
-            <div class="corte-resumen">
-                <p><strong>Ventas Realizadas Hoy:</strong> <span id="cant-ventas">0</span></p>
-                <p><strong>Ingresos Brutos del Día:</strong> $<span id="total-ingresos">0.00</span></p>
-                <p><strong>Costo de Mercancía:</strong> $<span id="total-costos">0.00</span></p>
-                <hr>
-                <p style="color: #27ae60; font-size: 1.2rem;"><strong>Ganancia Neta del Día:</strong> $<span id="total-ganancia">0.00</span></p>
-            </div>
-
-            <h3 style="font-size: 1rem;">Detalle de Ventas de Hoy</h3>
-            <div style="max-height: 180px; overflow-y: auto;">
-                <table id="tabla-historial">
-                    <thead>
-                        <tr><th>Fecha/Cliente</th><th>Total</th><th>Pago</th><th>Acciones</th></tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <br>
-            <button type="button" class="btn-danger" onclick="reiniciarDia()">Cerrar Caja (Guardar Día)</button>
-        </div>
-    </div>
-
-    <!-- SECCIÓN 6: REGISTRO MENSUAL -->
-    <div id="sec-mensual" class="tab-content">
-        <div class="card">
-            <h2>Historial Mensual</h2>
-            
-            <label>Seleccionar Mes / Año:</label>
-            <select id="select-mes-filtro" onchange="actualizarVistaMensual()"></select>
-
-            <div class="corte-resumen" style="background-color: #f0fdf4;">
-                <p><strong>Días Registrados en el Mes:</strong> <span id="mes-dias">0</span></p>
-                <p><strong>Total Venta Bruta del Mes:</strong> $<span id="mes-total-ingresos">0.00</span></p>
-                <hr>
-                <p style="color: #166534; font-size: 1.25rem;"><strong>Ganancia Neta Total del Mes:</strong> $<span id="mes-total-ganancias">0.00</span></p>
-            </div>
-
-            <button type="button" class="btn-excel" onclick="exportarExcelMes()">📊 Exportar Mes a Excel (CSV)</button>
-
-            <h3 style="font-size: 1rem; margin-top: 15px;">Cortes Diarios del Mes</h3>
-            <div style="max-height: 220px; overflow-y: auto;">
-                <table id="tabla-cortes-mensuales">
-                    <thead>
-                        <tr><th>Fecha</th><th>Ventas</th><th>Total Venta ($)</th><th>Ganancia Neta ($)</th></tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- SECCIÓN 7: SINCRONIZAR ENTRE CELULARES (OFFLINE) -->
-    <div id="sec-sync" class="tab-content">
-        <div class="card">
-            <h2>Sincronización Offline (Memoria Interna)</h2>
-            <p style="font-size: 0.9rem; color: #555;">
-                Esta app guarda grandes volúmenes de datos directamente en el almacenamiento interno de tu teléfono (IndexedDB):
-            </p>
-
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #8e44ad;">
-                <h3 style="margin-top:0; font-size: 1rem; color: #8e44ad;">Paso 1: Exportar Respaldo</h3>
-                <p style="font-size: 0.88rem;">Crea un archivo con todo el inventario, clientes y ventas para pasarlo a otro dispositivo.</p>
-                <button type="button" class="btn-sync" onclick="exportarBackupTotal()">💾 Descargar Respaldo Total (.json)</button>
-            </div>
-
-            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2980b9;">
-                <h3 style="margin-top:0; font-size: 1rem; color: #2980b9;">Paso 2: Importar Respaldo</h3>
-                <p style="font-size: 0.88rem;">Selecciona un archivo de respaldo guardado previamente para cargar la información.</p>
-                <input type="file" id="input-archivo-backup" accept=".json" style="margin-bottom: 8px;">
-                <button type="button" class="btn-info" onclick="importarBackupTotal()">📥 Cargar y Sincronizar Datos</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- SECCIÓN 8: RESPALDO POR CORREO -->
-    <div id="sec-correo" class="tab-content">
-        <div class="card">
-            <h2>Respaldo por Correo Electrónico</h2>
-            <p style="font-size: 0.9rem; color: #555;">
-                Ingresa el correo electrónico donde deseas recibir el respaldo de tu base de datos (inventario, clientes y ventas). Se abrirá tu aplicación de correo lista para enviarlo.
-            </p>
-
-            <label>Correo Electrónico de Destino:</label>
-            <input type="email" id="input-correo-destino" placeholder="tucorreo@gmail.com">
-
-            <button type="button" class="btn-email" onclick="enviarRespaldoPorCorreo()">📧 Enviar Respaldo por Correo</button>
+        <!-- Tabla de Clientes Registrados -->
+        <div class="client-table-container">
+            <table class="client-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Teléfono</th>
+                    </tr>
+                </thead>
+                <tbody id="clientTableBody">
+                    <!-- Los registros se agregarán aquí dinámicamente -->
+                </tbody>
+            </table>
         </div>
     </div>
 
     <script>
-        let db;
-        let productos = {};
-        let clientes = {};
-        let ventasDelDia = [];
-        let historialMensual = [];
-        let ultimaVentaRealizada = null;
-        let carrito = [];
+        const clientForm = document.getElementById('clientForm');
+        const clientTableBody = document.getElementById('clientTableBody');
 
-        const request = indexedDB.open('PuntoVentaProDB', 2);
+        clientForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // Evita que la página se recargue
 
-        request.onerror = function(event) {
-            console.error("Error al abrir la base de datos en el teléfono:", event);
-        };
+            // Obtener los valores de los inputs
+            const name = document.getElementById('clientName').value;
+            const phone = document.getElementById('clientPhone').value;
 
-        request.onsuccess = function(event) {
-            db = event.target.result;
-            cargarDatosDesdeDB();
-        };
+            // Crear una nueva fila en la tabla
+            const newRow = document.createElement('tr');
 
-        request.onupgradeneeded = function(event) {
-            db = event.target.result;
-            if (!db.objectStoreNames.contains('almacen')) {
-                db.createObjectStore('almacen');
-            }
-        };
-
-        function guardarEnDB(clave, valor, callback) {
-            if (!db) return;
-            const transaction = db.transaction(['almacen'], 'readwrite');
-            const store = transaction.objectStore('almacen');
-            const request = store.put(valor, clave);
-            request.onsuccess = function() {
-                if (callback) callback();
-            };
-        }
-
-        function cargarDatosDesdeDB() {
-            const transaction = db.transaction(['almacen'], 'readonly');
-            const store = transaction.objectStore('almacen');
-
-            store.get('productos').onsuccess = function(e) {
-                productos = e.target.result || {};
-                actualizarTablaProductos();
-                actualizarListaSugerencias();
-            };
-
-            store.get('clientes').onsuccess = function(e) {
-                clientes = e.target.result || {};
-                actualizarTablaClientes();
-                actualizarSelectClientes();
-            };
-
-            store.get('ventasDelDia').onsuccess = function(e) {
-                ventasDelDia = e.target.result || [];
-                actualizarVistaCorte();
-                actualizarVistaBalance();
-            };
-
-            store.get('historialMensual').onsuccess = function(e) {
-                historialMensual = e.target.result || [];
-            };
-        }
-
-        function cambiarPestana(idSeccion, boton) {
-            document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-
-            document.getElementById(idSeccion).classList.add('active');
-            boton.classList.add('active');
-
-            if (idSeccion === 'sec-balance') {
-                actualizarVistaBalance();
-            } else if (idSeccion === 'sec-corte') {
-                actualizarVistaCorte();
-            } else if (idSeccion === 'sec-mensual') {
-                cargarOpcionesMeses();
-                actualizarVistaMensual();
-            }
-        }
-
-        function comprimirImagen(file, callback) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const img = new Image();
-                img.onload = function () {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 250;
-                    const MAX_HEIGHT = 250;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                    } else {
-                        if (height > MAX_HEIGHT) {
-                            width *= MAX_HEIGHT / height;
-                            height = MAX_HEIGHT;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    const dataurl = canvas.toDataURL('image/jpeg', 0.8);
-                    callback(dataurl);
-                }
-                img.src = e.target.result;
-            }
-            reader.readAsDataURL(file);
-        }
-
-        // GESTIÓN DE CLIENTES
-        document.getElementById('form-cliente').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const nombre = document.getElementById('cli-nombre').value.trim();
-            const telefono = document.getElementById('cli-telefono').value.trim();
-
-            if (!nombre || !telefono) return;
-
-            clientes[nombre] = { telefono };
-            guardarClientesDB();
-            actualizarTablaClientes();
-            actualizarSelectClientes();
-            e.target.reset();
-            alert('Cliente guardado correctamente.');
-        });
-
-        function guardarClientesDB() {
-            guardarEnDB('clientes', clientes);
-        }
-
-        function eliminarCliente(nombre) {
-            if (confirm(`¿Estás seguro de eliminar al cliente "${nombre}"?`)) {
-                delete clientes[nombre];
-                guardarClientesDB();
-                actualizarTablaClientes();
-                actualizarSelectClientes();
-                alert('Cliente eliminado.');
-            }
-        }
-
-        function actualizarTablaClientes() {
-            const tbody = document.querySelector('#tabla-clientes tbody');
-            tbody.innerHTML = '';
-            for (let nombre in clientes) {
-                const c = clientes[nombre];
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${nombre}</td>
-                        <td>${c.telefono || '-'}</td>
-                        <td>
-                            <button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarCliente('${nombre}')">🗑️</button>
-                        </td>
-                    </tr>`;
-            }
-        }
-
-        function actualizarSelectClientes() {
-            const select = document.getElementById('venta-cliente');
-            select.innerHTML = '<option value="Público General">Público General</option>';
-            for (let nombre in clientes) {
-                select.innerHTML += `<option value="${nombre}">${nombre}</option>`;
-            }
-        }
-
-        // GESTIÓN DE PRODUCTOS
-        document.getElementById('form-producto').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const codigo = document.getElementById('prod-codigo').value.trim();
-            const nombre = document.getElementById('prod-nombre').value.trim();
-            const costo = parseFloat(document.getElementById('prod-costo').value);
-            const precio = parseFloat(document.getElementById('prod-precio').value);
-            const stock = parseInt(document.getElementById('prod-stock').value);
-            const inputImagen = document.getElementById('prod-imagen');
-
-            let imagenBase64 = productos[codigo] ? productos[codigo].imagen : '';
-
-            if (inputImagen.files && inputImagen.files[0]) {
-                comprimirImagen(inputImagen.files[0], function(imgOptimizada) {
-                    guardarYActualizarProducto(codigo, nombre, costo, precio, stock, imgOptimizada, e.target);
-                });
-            } else {
-                guardarYActualizarProducto(codigo, nombre, costo, precio, stock, imagenBase64, e.target);
-            }
-        });
-
-        function guardarYActualizarProducto(codigo, nombre, costo, precio, stock, imagen, formulario) {
-            productos[codigo] = { nombre, costo, precio, stock, imagen };
-            guardarProductosDB();
-            actualizarTablaProductos();
-            actualizarListaSugerencias();
-            formulario.reset();
-            alert('Producto guardado correctamente en la memoria del teléfono.');
-        }
-
-        function guardarProductosDB() {
-            guardarEnDB('productos', productos);
-        }
-
-        function eliminarProducto(codigo) {
-            if (confirm(`¿Estás seguro de eliminar el producto con código "${codigo}"?`)) {
-                delete productos[codigo];
-                guardarProductosDB();
-                actualizarTablaProductos();
-                actualizarListaSugerencias();
-                alert('Producto eliminado del inventario.');
-            }
-        }
-
-        function actualizarTablaProductos() {
-            const tbody = document.querySelector('#tabla-productos tbody');
-            tbody.innerHTML = '';
-            for (let cod in productos) {
-                const p = productos[cod];
-                const imagenHtml = p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : `<span style="color:#aaa; font-size:0.75rem;">Sin img</span>`;
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="text-align:center;">${imagenHtml}</td>
-                        <td>${cod}</td>
-                        <td>${p.nombre}</td>
-                        <td>$${p.costo.toFixed(2)}</td>
-                        <td>$${p.precio.toFixed(2)}</td>
-                        <td style="font-weight:bold; color:${p.stock < 3 ? 'red' : 'black'};">${p.stock}</td>
-                        <td>
-                            <button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarProducto('${cod}')">🗑️</button>
-                        </td>
-                    </tr>`;
-            }
-        }
-
-        function actualizarListaSugerencias() {
-            const datalist = document.getElementById('lista-sugerencias-productos');
-            datalist.innerHTML = '';
-            for (let cod in productos) {
-                const p = productos[cod];
-                datalist.innerHTML += `<option value="${p.nombre}">Código: ${cod} - $${p.precio.toFixed(2)}</option>`;
-                datalist.innerHTML += `<option value="${cod}">${p.nombre} - $${p.precio.toFixed(2)}</option>`;
-            }
-        }
-
-        function obtenerCodigoDeBusqueda(termino) {
-            const busqueda = termino.trim().toLowerCase();
-            if (productos[termino.trim()]) return termino.trim();
-            for (let cod in productos) {
-                if (productos[cod].nombre.toLowerCase() === busqueda) return cod;
-            }
-            for (let cod in productos) {
-                if (productos[cod].nombre.toLowerCase().includes(busqueda)) return cod;
-            }
-            return null;
-        }
-
-        document.getElementById('form-venta').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const entrada = document.getElementById('venta-busqueda').value;
-            const codigo = obtenerCodigoDeBusqueda(entrada);
+            const nameCell = document.createElement('td');
+            nameCell.textContent = name;
             
-            if (!codigo || !productos[codigo]) {
-                alert('Producto no encontrado por código ni por nombre.');
-                return;
-            }
+            const phoneCell = document.createElement('td');
+            phoneCell.textContent = phone;
 
-            if (productos[codigo].stock <= 0) {
-                alert('¡Sin Stock suficiente de este producto!');
-                return;
-            }
+            // Añadir las celdas a la fila
+            newRow.appendChild(nameCell);
+            newRow.appendChild(phoneCell);
 
-            const enCarrito = carrito.find(item => item.codigo === codigo);
-            if (enCarrito) {
-                if (enCarrito.cantidad + 1 > productos[codigo].stock) {
-                    alert('No hay suficiente stock para agregar otra unidad.');
-                    return;
-                }
-                enCarrito.cantidad += 1;
-            } else {
-                carrito.push({
-                    codigo: codigo,
-                    nombre: productos[codigo].nombre,
-                    costo: productos[codigo].costo,
-                    precio: productos[codigo].precio,
-                    cantidad: 1
-                });
-            }
+            // Añadir la fila al cuerpo de la tabla
+            clientTableBody.appendChild(newRow);
 
-            document.getElementById('venta-busqueda').value = '';
-            actualizarCarrito();
+            // Limpiar el formulario
+            clientForm.reset();
         });
-
-        function actualizarCarrito() {
-            const tbody = document.querySelector('#tabla-carrito tbody');
-            tbody.innerHTML = '';
-            let total = 0;
-
-            carrito.forEach((item, index) => {
-                const subtotal = item.precio * item.cantidad;
-                total += subtotal;
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${item.nombre}</td>
-                        <td>${item.cantidad}</td>
-                        <td>$${subtotal.toFixed(2)}</td>
-                        <td><button type="button" class="btn-danger" style="padding:2px 5px;" onclick="eliminarDelCarrito(${index})">X</button></td>
-                    </tr>`;
-            });
-
-            document.getElementById('total-venta').innerText = total.toFixed(2);
-            calcularCambio();
-        }
-
-        function eliminarDelCarrito(index) {
-            carrito.splice(index, 1);
-            actualizarCarrito();
-        }
-
-        function cambiarMetodoPago() {
-            const metodo = document.getElementById('metodo-pago').value;
-            const contenedorEfectivo = document.getElementById('contenedor-efectivo');
-            if (metodo === 'Efectivo') {
-                contenedorEfectivo.style.display = 'block';
-            } else {
-                contenedorEfectivo.style.display = 'none';
-            }
-        }
-
-        function calcularCambio() {
-            const total = parseFloat(document.getElementById('total-venta').innerText) || 0;
-            const pagado = parseFloat(document.getElementById('monto-pagado').value) || 0;
-            const cambio = pagado - total;
-            document.getElementById('monto-cambio').innerText = cambio >= 0 ? cambio.toFixed(2) : "0.00";
-        }
-
-        function procesarVenta() {
-            if (carrito.length === 0) {
-                alert('El carrito está vacío.');
-                return;
-            }
-
-            const totalVenta = carrito.reduce((sum, i) => sum + (i.precio * i.cantidad), 0);
-            const totalCosto = carrito.reduce((sum, i) => sum + (i.costo * i.cantidad), 0);
-            const metodoPago = document.getElementById('metodo-pago').value;
-            const clienteSeleccionado = document.getElementById('venta-cliente').value;
-            const pagado = parseFloat(document.getElementById('monto-pagado').value) || totalVenta;
-
-            if (metodoPago === 'Efectivo' && pagado < totalVenta) {
-                alert('El monto pagado es insuficiente.');
-                return;
-            }
-
-            carrito.forEach(item => {
-                productos[item.codigo].stock -= item.cantidad;
-            });
-            guardarProductosDB();
-            actualizarTablaProductos();
-            actualizarListaSugerencias();
-
-            const fechaActual = new Date();
-            const venta = {
-                id: Date.now(),
-                fechaHora: fechaActual.toLocaleString(),
-                cliente: clienteSeleccionado,
-                items: [...carrito],
-                totalVenta: totalVenta,
-                totalCosto: totalCosto,
-                ganancia: totalVenta - totalCosto,
-                metodoPago: metodoPago,
-                pagado: pagado,
-                cambio: metodoPago === 'Efectivo' ? pagado - totalVenta : 0
-            };
-
-            ventasDelDia.push(venta);
-            guardarEnDB('ventasDelDia', ventasDelDia);
-
-            ultimaVentaRealizada = venta;
-            
-            const btnImprimir = document.getElementById('btn-imprimir-ultimo');
-            btnImprimir.disabled = false;
-            btnImprimir.classList.remove('btn-secondary');
-            btnImprimir.classList.add('btn-info');
-
-            carrito = [];
-            document.getElementById('monto-pagado').value = '';
-            actualizarCarrito();
-            actualizarVistaBalance();
-
-            alert('Venta realizada con éxito.');
-        }
-
-        function generarYVisualizarPDF(venta) {
-            if (!venta) {
-                alert('No hay información de venta disponible.');
-                return;
-            }
-
-            const { jsPDF } = window.jspdf;
-            const alturaEstimada = 110 + (venta.items.length * 10);
-            const doc = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: [58, alturaEstimada]
-            });
-
-            doc.setFont("courier", "normal");
-            doc.setFontSize(9);
-
-            let y = 8;
-            doc.text("TICKET DE VENTA", 29, y, { align: "center" });
-            y += 5;
-            doc.setFontSize(7.5);
-            doc.text(`Fecha: ${venta.fechaHora}`, 3, y);
-            y += 4;
-            doc.text(`Cliente: ${venta.cliente}`, 3, y);
-            y += 4;
-            doc.text(`Pago: ${venta.metodoPago}`, 3, y);
-            y += 4;
-            doc.text("----------------------------------------", 3, y);
-            y += 4;
-
-            venta.items.forEach(i => {
-                const subtotal = (i.precio * i.cantidad).toFixed(2);
-                doc.text(`${i.nombre} x${i.cantidad}`, 3, y);
-                y += 4;
-                doc.text(`$${subtotal}`, 55, y, { align: "right" });
-                y += 5;
-            });
-
-            doc.text("----------------------------------------", 3, y);
-            y += 5;
-            doc.setFontSize(9);
-            doc.text(`TOTAL: $${venta.totalVenta.toFixed(2)}`, 3, y);
-            y += 5;
-
-            if (venta.metodoPago === 'Efectivo') {
-                doc.setFontSize(7.5);
-                doc.text(`Recibido: $${venta.pagado.toFixed(2)}`, 3, y);
-                y += 4;
-                doc.text(`Cambio: $${venta.cambio.toFixed(2)}`, 3, y);
-                y += 5;
-            }
-
-            y += 3;
-            doc.text("¡Gracias por su compra!", 29, y, { align: "center" });
-
-            const pdfBlob = doc.output('blob');
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-            window.open(pdfUrl, '_blank');
-        }
-
-        function visualizarUltimoTicketPDF() {
-            if (ultimaVentaRealizada) {
-                generarYVisualizarPDF(ultimaVentaRealizada);
-            } else {
-                alert('Aún no has procesado ninguna venta en esta sesión.');
-            }
-        }
-
-        function visualizarVentaPorIndicePDF(index) {
-            const venta = ventasDelDia[index];
-            if (venta) {
-                generarYVisualizarPDF(venta);
-            }
-        }
-
-        function actualizarVistaBalance() {
-            let ingresosTotales = 0;
-            let egresosTotales = 0;
-            let productosAgrupados = {};
-
-            ventasDelDia.forEach(v => {
-                ingresosTotales += v.totalVenta;
-                egresosTotales += v.totalCosto;
-
-                v.items.forEach(item => {
-                    if (!productosAgrupados[item.codigo]) {
-                        productosAgrupados[item.codigo] = {
-                            nombre: item.nombre,
-                            cantidad: 0,
-                            ingreso: 0,
-                            egreso: 0
-                        };
-                    }
-                    productosAgrupados[item.codigo].cantidad += item.cantidad;
-                    productosAgrupados[item.codigo].ingreso += item.precio * item.cantidad;
-                    productosAgrupados[item.codigo].egreso += item.costo * item.cantidad;
-                });
-            });
-
-            document.getElementById('balance-ingresos').innerText = ingresosTotales.toFixed(2);
-            document.getElementById('balance-egresos').innerText = egresosTotales.toFixed(2);
-            document.getElementById('balance-ganancia').innerText = (ingresosTotales - egresosTotales).toFixed(2);
-
-            const tbody = document.querySelector('#tabla-balance-productos tbody');
-            tbody.innerHTML = '';
-
-            for (let cod in productosAgrupados) {
-                const prod = productosAgrupados[cod];
-                const gananciaProd = prod.ingreso - prod.egreso;
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${prod.nombre}</td>
-                        <td>${prod.cantidad}</td>
-                        <td>$${prod.ingreso.toFixed(2)}</td>
-                        <td>$${prod.egreso.toFixed(2)}</td>
-                        <td style="font-weight: bold; color: #27ae60;">$${gananciaProd.toFixed(2)}</td>
-                    </tr>`;
-            }
-        }
-
-        function actualizarVistaCorte() {
-            let ingresos = 0;
-            let costos = 0;
-
-            const tbody = document.querySelector('#tabla-historial tbody');
-            tbody.innerHTML = '';
-
-            ventasDelDia.forEach((v, index) => {
-                ingresos += v.totalVenta;
-                costos += v.totalCosto;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td><small>${v.fechaHora}</small><br><strong>${v.cliente}</strong></td>
-                        <td>$${v.totalVenta.toFixed(2)}</td>
-                        <td>${v.metodoPago}</td>
-                        <td>
-                            <button type="button" class="btn-info" style="padding:2px 5px; width:auto;" onclick="visualizarVentaPorIndicePDF(${index})">👁️</button>
-                            <button type="button" class="btn-danger" style="padding:2px 5px; width:auto;" onclick="cancelarVenta(${index})">X</button>
-                        </td>
-                    </tr>`;
-            });
-
-            document.getElementById('cant-ventas').innerText = ventasDelDia.length;
-            document.getElementById('total-ingresos').innerText = ingresos.toFixed(2);
-            document.getElementById('total-costos').innerText = costos.toFixed(2);
-            document.getElementById('total-ganancia').innerText = (ingresos - costos).toFixed(2);
-        }
-
-        function cancelarVenta(index) {
-            if (confirm('¿Deseas anular esta venta? El stock se devolverá al inventario.')) {
-                const ventaAnulada = ventasDelDia[index];
-                ventaAnulada.items.forEach(item => {
-                    if (productos[item.codigo]) {
-                        productos[item.codigo].stock += item.cantidad;
-                    }
-                });
-
-                guardarProductosDB();
-                actualizarTablaProductos();
-                actualizarListaSugerencias();
-
-                ventasDelDia.splice(index, 1);
-                guardarEnDB('ventasDelDia', ventasDelDia);
-                actualizarVistaCorte();
-                actualizarVistaBalance();
-            }
-        }
-
-        function reiniciarDia() {
-            if (ventasDelDia.length === 0) {
-                alert('No hay ventas registradas en el día actual.');
-                return;
-            }
-
-            if (confirm('¿Confirmas el cierre de caja? El acumulado del día se registrará en el Historial Mensual.')) {
-                const ahora = new Date();
-                const totalIngresos = ventasDelDia.reduce((s, v) => s + v.totalVenta, 0);
-                const totalGanancia = ventasDelDia.reduce((s, v) => s + v.ganancia, 0);
-                const claveMes = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
-
-                const registroCorte = {
-                    fechaCompleta: ahora.toLocaleDateString(),
-                    claveMes: claveMes,
-                    cantVentas: ventasDelDia.length,
-                    totalIngresos: totalIngresos,
-                    totalGanancia: totalGanancia
-                };
-
-                historialMensual.push(registroCorte);
-                guardarEnDB('historialMensual', historialMensual);
-
-                ventasDelDia = [];
-                guardarEnDB('ventasDelDia', ventasDelDia);
-                
-                ultimaVentaRealizada = null;
-                const btnImprimir = document.getElementById('btn-imprimir-ultimo');
-                btnImprimir.disabled = true;
-                btnImprimir.classList.remove('btn-info');
-                btnImprimir.classList.add('btn-secondary');
-
-                actualizarVistaCorte();
-                actualizarVistaBalance();
-                alert('Caja cerrada con éxito. Registro guardado en el mes.');
-            }
-        }
-
-        function cargarOpcionesMeses() {
-            const select = document.getElementById('select-mes-filtro');
-            select.innerHTML = '';
-            const mesesUnicos = [...new Set(historialMensual.map(c => c.claveMes))];
-
-            if (mesesUnicos.length === 0) {
-                const fechaActual = new Date();
-                const claveActual = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}`;
-                mesesUnicos.push(claveActual);
-            }
-
-            mesesUnicos.forEach(m => {
-                const [ano, mes] = m.split('-');
-                const option = document.createElement('option');
-                option.value = m;
-                option.innerText = `${mes}/${ano}`;
-                select.appendChild(option);
-            });
-        }
-
-        function actualizarVistaMensual() {
-            const mesSeleccionado = document.getElementById('select-mes-filtro').value;
-            const cortesFiltrados = historialMensual.filter(c => c.claveMes === mesSeleccionado);
-
-            let totalIngresosMes = 0;
-            let totalGananciasMes = 0;
-            let diasRegistrados = cortesFiltrados.length;
-
-            const tbody = document.querySelector('#tabla-cortes-mensuales tbody');
-            tbody.innerHTML = '';
-
-            cortesFiltrados.forEach(c => {
-                totalIngresosMes += c.totalIngresos;
-                totalGananciasMes += c.totalGanancia;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${c.fechaCompleta}</td>
-                        <td>${c.cantVentas}</td>
-                        <td>$${c.totalIngresos.toFixed(2)}</td>
-                        <td>$${c.totalGanancia.toFixed(2)}</td>
-                    </tr>`;
-            });
-
-            document.getElementById('mes-dias').innerText = diasRegistrados;
-            document.getElementById('mes-total-ingresos').innerText = totalIngresosMes.toFixed(2);
-            document.getElementById('mes-total-ganancias').innerText = totalGananciasMes.toFixed(2);
-        }
-
-        function exportarExcelMes() {
-            const mesSeleccionado = document.getElementById('select-mes-filtro').value;
-            const cortesFiltrados = historialMensual.filter(c => c.claveMes === mesSeleccionado);
-
-            if (cortesFiltrados.length === 0) {
-                alert('No hay datos para exportar en este mes.');
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-            csvContent += "Fecha,Ventas Realizadas,Total Ingresos ($),Ganancia Neta ($)\r\n";
-
-            cortesFiltrados.forEach(c => {
-                let row = `"${c.fechaCompleta}",${c.cantVentas},${c.totalIngresos.toFixed(2)},${c.totalGanancia.toFixed(2)}`;
-                csvContent += row + "\r\n";
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `reporte_corte_${mesSeleccionado}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        function exportarBackupTotal() {
-            const dataBackup = {
-                productos: productos,
-                clientes: clientes,
-                ventasDelDia: ventasDelDia,
-                historialMensual: historialMensual
-            };
-
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataBackup));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `respaldo_pos_${new Date().toISOString().slice(0,10)}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function importarBackupTotal() {
-            const fileInput = document.getElementById('input-archivo-backup');
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Por favor selecciona primero un archivo de respaldo (.json).');
-                return;
-            }
-
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-
-            reader.onload = function(e) {
-                try {
-                    const contenido = JSON.parse(e.target.result);
-                    if (contenido.productos) {
-                        productos = contenido.productos;
-                        guardarProductosDB();
-                    }
-                    if (contenido.clientes) {
-                        clientes = contenido.clientes;
-                        guardarClientesDB();
-                    }
-                    if (contenido.ventasDelDia) {
-                        ventasDelDia = contenido.ventasDelDia;
-                        guardarEnDB('ventasDelDia', ventasDelDia);
-                    }
-                    if (contenido.historialMensual) {
-                        historialMensual = contenido.historialMensual;
-                        guardarEnDB('historialMensual', historialMensual);
-                    }
-
-                    actualizarTablaProductos();
-                    actualizarListaSugerencias();
-                    actualizarTablaClientes();
-                    actualizarSelectClientes();
-                    actualizarVistaCorte();
-                    actualizarVistaBalance();
-                    alert('¡Sincronización completada con éxito! Los datos han sido cargados.');
-                } catch (error) {
-                    console.error(error);
-                    alert('El archivo no es válido o está dañado.');
-                }
-            };
-
-            reader.readAsText(file);
-        }
-
-        function enviarRespaldoPorCorreo() {
-            const correoDestino = document.getElementById('input-correo-destino').value.trim();
-            if (!correoDestino) {
-                alert('Por favor ingresa un correo electrónico de destino.');
-                return;
-            }
-
-            const dataBackup = {
-                productos: productos,
-                clientes: clientes,
-                ventasDelDia: ventasDelDia,
-                historialMensual: historialMensual
-            };
-
-            const jsonString = JSON.stringify(dataBackup, null, 2);
-            const asunto = encodeURIComponent(`Respaldo POS - ${new Date().toLocaleDateString()}`);
-            const cuerpo = encodeURIComponent(`Aquí tienes el respaldo de tu sistema de Punto de Venta:\n\n${jsonString}`);
-
-            window.location.href = `mailto:${correoDestino}?subject=${asunto}&body=${cuerpo}`;
-        }
     </script>
+
 </body>
 </html>

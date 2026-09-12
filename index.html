@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta 100% Automático</title>
+    <title>Punto de Venta 100% Automático y Ahorro de Datos</title>
     <!-- Librería jsPDF para tickets -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -384,6 +384,7 @@
         let ultimaVentaRealizada = null;
         let carrito = [];
         let nipSeguridad = "";
+        let ultimaHuellaNube = ""; // Huella para ahorro de datos móviles
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -426,7 +427,6 @@
             store.get('nubeToken').onsuccess = (e) => { 
                 if(e.target.result) {
                     document.getElementById('nube-token').value = e.target.result;
-                    // DESCARGA AUTOMÁTICA AL ABRIR LA APP SI HAY CREDENCIALES
                     descargarDeLaNubeAutomatico();
                 }
             };
@@ -465,7 +465,6 @@
 
             if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
             
-            // AUTOMATISMO: Al entrar a secciones críticas, se refresca de la nube de inmediato
             if (idSeccion === 'sec-balance' || idSeccion === 'sec-corte' || idSeccion === 'sec-ventas') {
                 descargarDeLaNubeAutomatico();
             }
@@ -494,13 +493,15 @@
             document.getElementById('sync-status').innerText = "☁️ Sincronizando cambios...";
             document.getElementById('sync-status').style.color = "#d97706";
 
-            // Convertir datos JSON a matrices de texto compatibles con Google Sheets
             const payloadDatos = {
                 "productos": convertirObjetoAMatrizProductos(productos),
                 "clientes": convertirObjetoAMatrizClientes(clientes),
                 "ventasDelDia": convertirArrayAMatrizVentas(ventasDelDia),
                 "historialMensual": convertirArrayAMatrizHistorial(historialMensual)
             };
+
+            // Actualizar huella local al subir para reflejar el estado actual
+            ultimaHuellaNube = JSON.stringify(payloadDatos);
 
             const body = { token, accion: 'subir', datos: payloadDatos };
 
@@ -521,12 +522,13 @@
             });
         }
 
+        // DESCARGA INTELIGENTE (AHORRO DE DATOS MÓVILES SI NO HAY CAMBIOS)
         function descargarDeLaNubeAutomatico(mostrarAlertaExito = false) {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
             if (!url || !token) return;
 
-            document.getElementById('sync-status').innerText = "📥 Actualizando datos...";
+            document.getElementById('sync-status').innerText = "🔍 Verificando cambios...";
             document.getElementById('sync-status').style.color = "#2980b9";
 
             const body = { token, accion: 'descargar' };
@@ -543,6 +545,19 @@
 
                 const d = res.datos;
                 if (d) {
+                    const huellaEntrante = JSON.stringify(d);
+
+                    // AHORRO DE DATOS MÓVILES: Si la información en la nube es idéntica a la última conocida, 
+                    // se detiene la ejecución para no gastar recursos ni procesar de más.
+                    if (huellaEntrante === ultimaHuellaNube && !mostrarAlertaExito) {
+                        document.getElementById('sync-status').innerText = "🟢 Sin cambios (Ahorro de datos)";
+                        document.getElementById('sync-status').style.color = "#27ae60";
+                        return;
+                    }
+
+                    // Actualizar huella interna
+                    ultimaHuellaNube = huellaEntrante;
+
                     if (d.productos) productos = convertirMatrizAObjetoProductos(d.productos);
                     if (d.clientes) clientes = convertirMatrizAObjetoClientes(d.clientes);
                     if (d.ventasDelDia) ventasDelDia = convertirMatrizAArrayVentas(d.ventasDelDia);
@@ -632,7 +647,7 @@
             actualizarTablaClientes();
             actualizarSelectClientes();
             e.target.reset();
-            subirALaNubeAutomatico(); // Sube solo de fondo
+            subirALaNubeAutomatico();
         });
 
         function eliminarCliente(nombre) {
@@ -793,7 +808,6 @@
             carrito = [];
             actualizarCarrito();
             
-            // Subida automática inmediata de fondo
             subirALaNubeAutomatico();
             alert('✅ Venta procesada y sincronizada de forma automática.');
         }

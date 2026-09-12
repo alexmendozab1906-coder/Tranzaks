@@ -11,14 +11,14 @@
         h1 { font-size: 1.4rem; text-align: center; color: #2c3e50; margin-bottom: 15px; }
         .nav-tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
         .tab-btn {
-            min-width: 120px;
+            min-width: 100px;
             padding: 10px;
             background: transparent;
             color: #475569;
             border: none;
             border-radius: 8px;
             font-weight: bold;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
         }
@@ -89,10 +89,11 @@
     <!-- BARRA DE NAVEGACIÓN -->
     <div class="nav-tabs">
         <button type="button" class="tab-btn active" onclick="cambiarPestana('sec-ventas', this)">1. Ventas</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-productos', this)">2. Productos</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">3. Corte del Día</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">4. Registro Mes</button>
-        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-sync', this)">5. Sincronizar</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-balance', this)">2. Balance Día</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-productos', this)">3. Productos</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">4. Corte Caja</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">5. Mes</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-sync', this)">6. Sync</button>
     </div>
 
     <!-- SECCIÓN 1: VENTAS -->
@@ -129,7 +130,32 @@
         </div>
     </div>
 
-    <!-- SECCIÓN 2: PRODUCTOS -->
+    <!-- SECCIÓN 2: BALANCE DEL DÍA -->
+    <div id="sec-balance" class="tab-content">
+        <div class="card">
+            <h2>Balance General del Día (Pre-Corte)</h2>
+            <button type="button" onclick="actualizarVistaBalance()" class="btn-info">Actualizar Balance</button>
+            
+            <div class="corte-resumen">
+                <p><strong>Total Ingresos del Día:</strong> $<span id="balance-ingresos">0.00</span></p>
+                <p><strong>Total Egresos (Costos):</strong> $<span id="balance-egresos">0.00</span></p>
+                <hr>
+                <p style="color: #27ae60; font-size: 1.2rem;"><strong>Ganancia Neta Actual:</strong> $<span id="balance-ganancia">0.00</span></p>
+            </div>
+
+            <h3 style="font-size: 1rem; margin-top: 15px;">Desglose por Producto Vendido Hoy</h3>
+            <div style="max-height: 220px; overflow-y: auto;">
+                <table id="tabla-balance-productos">
+                    <thead>
+                        <tr><th>Producto</th><th>Cant. Vendida</th><th>Ingreso Total</th><th>Egreso Total</th><th>Ganancia Neta</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 3: PRODUCTOS -->
     <div id="sec-productos" class="tab-content">
         <div class="card">
             <h2>Registro de Productos</h2>
@@ -160,7 +186,7 @@
         </div>
     </div>
 
-    <!-- SECCIÓN 3: CORTE DEL DÍA -->
+    <!-- SECCIÓN 4: CORTE DEL DÍA -->
     <div id="sec-corte" class="tab-content">
         <div class="card">
             <h2>Corte de Caja y Ganancias del Día</h2>
@@ -188,7 +214,7 @@
         </div>
     </div>
 
-    <!-- SECCIÓN 4: REGISTRO MENSUAL -->
+    <!-- SECCIÓN 5: REGISTRO MENSUAL -->
     <div id="sec-mensual" class="tab-content">
         <div class="card">
             <h2>Historial Mensual</h2>
@@ -217,7 +243,7 @@
         </div>
     </div>
 
-    <!-- SECCIÓN 5: SINCRONIZAR ENTRE CELULARES (OFFLINE) -->
+    <!-- SECCIÓN 6: SINCRONIZAR ENTRE CELULARES (OFFLINE) -->
     <div id="sec-sync" class="tab-content">
         <div class="card">
             <h2>Sincronización Offline (Memoria Interna)</h2>
@@ -289,6 +315,7 @@
             store.get('ventasDelDia').onsuccess = function(e) {
                 ventasDelDia = e.target.result || [];
                 actualizarVistaCorte();
+                actualizarVistaBalance();
             };
 
             store.get('historialMensual').onsuccess = function(e) {
@@ -303,7 +330,9 @@
             document.getElementById(idSeccion).classList.add('active');
             boton.classList.add('active');
 
-            if (idSeccion === 'sec-corte') {
+            if (idSeccion === 'sec-balance') {
+                actualizarVistaBalance();
+            } else if (idSeccion === 'sec-corte') {
                 actualizarVistaCorte();
             } else if (idSeccion === 'sec-mensual') {
                 cargarOpcionesMeses();
@@ -551,6 +580,7 @@
             carrito = [];
             document.getElementById('monto-pagado').value = '';
             actualizarCarrito();
+            actualizarVistaBalance();
 
             alert('Venta realizada con éxito.');
         }
@@ -563,7 +593,6 @@
             }
 
             const { jsPDF } = window.jspdf;
-            // Rollo térmico estándar de 58mm de ancho, altura calculada dinámicamente según productos
             const alturaEstimada = 100 + (venta.items.length * 10);
             const doc = new jsPDF({
                 orientation: 'portrait',
@@ -610,7 +639,6 @@
             y += 3;
             doc.text("¡Gracias por su compra!", 29, y, { align: "center" });
 
-            // Crear Blob URL para visualizar el archivo PDF en una nueva pestaña
             const pdfBlob = doc.output('blob');
             const pdfUrl = URL.createObjectURL(pdfBlob);
             window.open(pdfUrl, '_blank');
@@ -628,6 +656,51 @@
             const venta = ventasDelDia[index];
             if (venta) {
                 generarYVisualizarPDF(venta);
+            }
+        }
+
+        function actualizarVistaBalance() {
+            let ingresosTotales = 0;
+            let egresosTotales = 0;
+            let productosAgrupados = {};
+
+            ventasDelDia.forEach(v => {
+                ingresosTotales += v.totalVenta;
+                egresosTotales += v.totalCosto;
+
+                v.items.forEach(item => {
+                    if (!productosAgrupados[item.codigo]) {
+                        productosAgrupados[item.codigo] = {
+                            nombre: item.nombre,
+                            cantidad: 0,
+                            ingreso: 0,
+                            egreso: 0
+                        };
+                    }
+                    productosAgrupados[item.codigo].cantidad += item.cantidad;
+                    productosAgrupados[item.codigo].ingreso += item.precio * item.cantidad;
+                    productosAgrupados[item.codigo].egreso += item.costo * item.cantidad;
+                });
+            });
+
+            document.getElementById('balance-ingresos').innerText = ingresosTotales.toFixed(2);
+            document.getElementById('balance-egresos').innerText = egresosTotales.toFixed(2);
+            document.getElementById('balance-ganancia').innerText = (ingresosTotales - egresosTotales).toFixed(2);
+
+            const tbody = document.querySelector('#tabla-balance-productos tbody');
+            tbody.innerHTML = '';
+
+            for (let cod in productosAgrupados) {
+                const prod = productosAgrupados[cod];
+                const gananciaProd = prod.ingreso - prod.egreso;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${prod.nombre}</td>
+                        <td>${prod.cantidad}</td>
+                        <td>$${prod.ingreso.toFixed(2)}</td>
+                        <td>$${prod.egreso.toFixed(2)}</td>
+                        <td style="font-weight: bold; color: #27ae60;">$${gananciaProd.toFixed(2)}</td>
+                    </tr>`;
             }
         }
 
@@ -676,6 +749,7 @@
                 ventasDelDia.splice(index, 1);
                 guardarEnDB('ventasDelDia', ventasDelDia);
                 actualizarVistaCorte();
+                actualizarVistaBalance();
             }
         }
 
@@ -712,6 +786,7 @@
                 btnImprimir.classList.add('btn-secondary');
 
                 actualizarVistaCorte();
+                actualizarVistaBalance();
                 alert('Caja cerrada con éxito. Registro guardado en el mes.');
             }
         }
@@ -836,6 +911,7 @@
                     actualizarTablaProductos();
                     actualizarListaSugerencias();
                     actualizarVistaCorte();
+                    actualizarVistaBalance();
                     alert('¡Sincronización completada con éxito! Los datos han sido cargados.');
                 } catch (error) {
                     console.error(error);

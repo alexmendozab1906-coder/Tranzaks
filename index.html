@@ -12,7 +12,7 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f1f5f9; color: #333; display: flex; height: 100vh; overflow: hidden; }
         
-        /* BARRA LATERAL (SIDEBAR) - Más angosta (180px) */
+        /* BARRA LATERAL (SIDEBAR) - Izquierda, angosta (180px) */
         .sidebar {
             width: 180px;
             background-color: #1e293b;
@@ -24,7 +24,7 @@
             flex-shrink: 0;
             position: relative;
         }
-        /* Clase para ocultar el menú al alternar */
+        /* Clase para ocultar el menú por defecto hacia la izquierda */
         .sidebar.collapsed {
             transform: translateX(-100%);
             margin-left: -180px;
@@ -82,9 +82,10 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             display: flex;
             align-items: center;
-            gap: 15px;
+            justify-content: space-between; /* Permite separar el título a la izquierda y el botón a la derecha */
         }
-        /* BOTÓN DE MENÚ EXTERNO FIJO */
+        
+        /* BOTÓN DE MENÚ UBICADO A LA DERECHA */
         .menu-toggle {
             background: #2563eb;
             color: white;
@@ -165,7 +166,7 @@
 </head>
 <body>
 
-    <!-- BARRA LATERAL (SIDEBAR) -->
+    <!-- BARRA LATERAL (DESLIZABLE DESDE LA IZQUIERDA) -->
     <div class="sidebar collapsed" id="sidebar">
         <div class="sidebar-header">📦 Menú Principal</div>
         <div class="sidebar-menu">
@@ -182,9 +183,9 @@
     <!-- CONTENEDOR PRINCIPAL -->
     <div class="main-container">
         <div class="topbar">
-            <!-- BOTÓN DE MENÚ VISIBLE EN LA BARRA SUPERIOR -->
-            <button class="menu-toggle" onclick="toggleSidebar()">☰ Menú</button>
             <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Sistema de Caja</h1>
+            <!-- BOTÓN DE MENÚ UBICADO A LA DERECHA -->
+            <button class="menu-toggle" onclick="toggleSidebar()">☰ Menú</button>
         </div>
 
         <div class="content-area">

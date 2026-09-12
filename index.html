@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta Multi-dispositivo (Google Sheets)</title>
+    <title>Punto de Venta 100% Automático</title>
     <!-- Librería jsPDF para tickets -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -121,8 +121,6 @@
         .btn-info:hover { background-color: #2471a3; }
         .btn-secondary { background-color: #7f8c8d; }
         .btn-secondary:hover { background-color: #6c757d; }
-        .btn-cloud { background-color: #0284c7; }
-        .btn-cloud:hover { background-color: #0369a1; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
         th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: middle; }
         th { background-color: #f8fafc; color: #475569; }
@@ -131,6 +129,7 @@
         .corte-resumen p { margin: 6px 0; font-size: 1rem; }
         .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; }
         .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
+        .sync-indicator { font-size: 0.8rem; color: #27ae60; font-weight: bold; text-align: right; margin-bottom: 5px; }
 
         @media (max-width: 768px) {
             .sidebar {
@@ -154,18 +153,20 @@
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-productos', this)">4. Productos</button>
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">5. Corte</button>
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">6. Mes</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-nube', this)">☁️ 7. Sincronizar</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-reiniciar', this)">🔄 8. Seguridad</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-nube', this)">⚙️ Config. Nube</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-reiniciar', this)">🔒 Seguridad</button>
         </div>
     </div>
 
     <div class="main-container">
         <div class="topbar">
-            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Punto de Venta Compartido</h1>
+            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Punto de Venta Multi-dispositivo</h1>
             <button class="menu-toggle" onclick="toggleSidebar()">☰ Menú</button>
         </div>
 
         <div class="content-area">
+            <div id="sync-status" class="sync-indicator">🟢 Sistema listo</div>
+
             <!-- SECCIÓN 1: VENTAS -->
             <div id="sec-ventas" class="tab-content active" style="display: block;">
                 <div class="card">
@@ -204,7 +205,7 @@
                         <p style="margin: 5px 0;"><strong>Cambio:</strong> $<span id="monto-cambio">0.00</span></p>
                     </div>
 
-                    <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta y Sincronizar</button>
+                    <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta</button>
                     <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="visualizarUltimoTicketPDF()" disabled style="margin-top: 5px;">Visualizar PDF Último Ticket</button>
                 </div>
             </div>
@@ -216,7 +217,7 @@
                     <form id="form-cliente">
                         <input type="text" id="cli-nombre" placeholder="Nombre completo o razón social" required>
                         <input type="text" id="cli-telefono" placeholder="Número telefónico" required>
-                        <button type="submit">Guardar y Sincronizar Cliente</button>
+                        <button type="submit">Guardar Cliente</button>
                     </form>
 
                     <h3 style="margin-top:20px; font-size: 1rem;">Lista de Clientes</h3>
@@ -235,8 +236,6 @@
             <div id="sec-balance" class="tab-content" style="display: none;">
                 <div class="card">
                     <h2>Balance General del Día</h2>
-                    <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Descargar Datos Nuevos de la Nube</button>
-                    
                     <div class="corte-resumen">
                         <p><strong>Total Ingresos del Día:</strong> $<span id="balance-ingresos">0.00</span></p>
                         <p><strong>Total Costo de Producto:</strong> $<span id="balance-egresos">0.00</span></p>
@@ -272,7 +271,7 @@
                         <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto:</label>
                         <input type="file" id="prod-imagen" accept="image/*">
 
-                        <button type="submit">Guardar y Sincronizar Producto</button>
+                        <button type="submit">Guardar Producto</button>
                     </form>
 
                     <div class="inversion-box">
@@ -295,8 +294,6 @@
             <div id="sec-corte" class="tab-content" style="display: none;">
                 <div class="card">
                     <h2>Corte de Caja del Día</h2>
-                    <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Actualizar con la Nube</button>
-                    
                     <div class="corte-resumen">
                         <p><strong>Ventas Realizadas Hoy:</strong> <span id="cant-ventas">0</span></p>
                         <p><strong>Ingresos Brutos:</strong> $<span id="total-ingresos">0.00</span></p>
@@ -315,7 +312,7 @@
                         </table>
                     </div>
                     <br>
-                    <button type="button" class="btn-danger" onclick="reiniciarDia()">Cerrar Caja (Sincronizar Corte)</button>
+                    <button type="button" class="btn-danger" onclick="reiniciarDia()">Cerrar Caja</button>
                 </div>
             </div>
 
@@ -345,12 +342,12 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN 7: SINCRONIZACIÓN -->
+            <!-- SECCIÓN 7: CONFIGURACIÓN DE NUBE -->
             <div id="sec-nube" class="tab-content" style="display: none;">
                 <div class="card">
-                    <h2>Conexión con Google Sheets</h2>
+                    <h2>Configuración de Conexión Automática</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Pega la URL de tu Apps Script y tu Clave Secreta en todos tus dispositivos para enlazarlos a la misma base de datos.
+                        Configura esto una sola vez en cada dispositivo. A partir de ahí, la app sincronizará todo de fondo sin botones.
                     </p>
 
                     <label>URL de Google Apps Script:</label>
@@ -359,10 +356,7 @@
                     <label>Clave o Token Secreto:</label>
                     <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123">
 
-                    <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <button type="button" class="btn-cloud" onclick="subirALaNube()">☁️ Guardar / Sincronizar Cambios</button>
-                        <button type="button" class="btn-info" onclick="descargarDeLaNube()">📥 Descargar Datos Actualizados</button>
-                    </div>
+                    <button type="button" class="btn-info" onclick="guardarCredencialesNube()" style="margin-top: 10px;">Guardar Configuración y Probar</button>
                 </div>
             </div>
 
@@ -400,10 +394,10 @@
             }
         }
 
-        const request = indexedDB.open('PuntoVentaSheetDB', 2);
+        const request = indexedDB.open('PuntoVentaSheetAutoDB', 2);
         request.onsuccess = function(event) {
             db = event.target.result;
-            cargarDatosDesdeDB();
+            cargarDatosLocalesYDescargarDeNube();
         };
         request.onupgradeneeded = function(event) {
             db = event.target.result;
@@ -418,7 +412,7 @@
             req.onsuccess = () => { if (callback) callback(); };
         }
 
-        function cargarDatosDesdeDB() {
+        function cargarDatosLocalesYDescargarDeNube() {
             const transaction = db.transaction(['almacen'], 'readonly');
             const store = transaction.objectStore('almacen');
 
@@ -427,13 +421,15 @@
             store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); };
             store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; };
             store.get('nubeUrl').onsuccess = (e) => { 
+                if(e.target.result) document.getElementById('nube-database-url').value = e.target.result;
+            };
+            store.get('nubeToken').onsuccess = (e) => { 
                 if(e.target.result) {
-                    document.getElementById('nube-database-url').value = e.target.result;
-                    // Auto-descargar al iniciar si ya hay URL configurada para tener lo último de otros dispositivos
-                    setTimeout(() => descargarDeLaNube(true), 1000);
+                    document.getElementById('nube-token').value = e.target.result;
+                    // DESCARGA AUTOMÁTICA AL ABRIR LA APP SI HAY CREDENCIALES
+                    descargarDeLaNubeAutomatico();
                 }
             };
-            store.get('nubeToken').onsuccess = (e) => { if(e.target.result) document.getElementById('nube-token').value = e.target.result; };
             store.get('nipSeguridad').onsuccess = (e) => { nipSeguridad = e.target.result || ""; actualizarInterfazNIP(); };
         }
 
@@ -468,79 +464,164 @@
             boton.classList.add('active');
 
             if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+            
+            // AUTOMATISMO: Al entrar a secciones críticas, se refresca de la nube de inmediato
+            if (idSeccion === 'sec-balance' || idSeccion === 'sec-corte' || idSeccion === 'sec-ventas') {
+                descargarDeLaNubeAutomatico();
+            }
+
             if (idSeccion === 'sec-balance') actualizarVistaBalance();
             else if (idSeccion === 'sec-corte') actualizarVistaCorte();
             else if (idSeccion === 'sec-mensual') { cargarOpcionesMeses(); actualizarVistaMensual(); }
         }
 
-        // FUNCIONES DE SINCRONIZACIÓN AUTOMÁTICA CON LA NUBE
-        function subirALaNube(silencioso = false) {
+        function guardarCredencialesNube() {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
-            if (!url) return !silencioso && alert('Ingresa la URL de tu Google Apps Script.');
+            if (!url || !token) return alert('Ingresa la URL y el Token.');
             
             guardarEnDB('nubeUrl', url);
             guardarEnDB('nubeToken', token);
+            descargarDeLaNubeAutomatico(true);
+        }
 
-            const datos = { token, productos, clientes, ventasDelDia, historialMensual };
-            return fetch(url, {
-                method: 'POST',
-                body: JSON.stringify(datos)
-            })
+        // MOTOR DE SINCRONIZACIÓN AUTOMÁTICA DE FONDO
+        function subirALaNubeAutomatico() {
+            const url = document.getElementById('nube-database-url').value.trim();
+            const token = document.getElementById('nube-token').value.trim();
+            if (!url || !token) return;
+
+            document.getElementById('sync-status').innerText = "☁️ Sincronizando cambios...";
+            document.getElementById('sync-status').style.color = "#d97706";
+
+            // Convertir datos JSON a matrices de texto compatibles con Google Sheets
+            const payloadDatos = {
+                "productos": convertirObjetoAMatrizProductos(productos),
+                "clientes": convertirObjetoAMatrizClientes(clientes),
+                "ventasDelDia": convertirArrayAMatrizVentas(ventasDelDia),
+                "historialMensual": convertirArrayAMatrizHistorial(historialMensual)
+            };
+
+            const body = { token, accion: 'subir', datos: payloadDatos };
+
+            fetch(url, { method: 'POST', body: JSON.stringify(body) })
             .then(res => res.json())
-            .then(response => {
-                if(response.status === "success") {
-                    if (!silencioso) alert('¡Datos sincronizados con éxito en Google Sheets!');
+            .then(res => {
+                if(res.status === "success") {
+                    document.getElementById('sync-status').innerText = "🟢 Sincronizado con la nube";
+                    document.getElementById('sync-status').style.color = "#27ae60";
                 } else {
-                    if (!silencioso) alert('Error: ' + (response.message || 'Token incorrecto'));
+                    document.getElementById('sync-status').innerText = "🔴 Error de Token";
+                    document.getElementById('sync-status').style.color = "#e74c3c";
                 }
             })
-            .catch(err => {
-                if (!silencioso) alert('Error de conexión: ' + err);
+            .catch(() => {
+                document.getElementById('sync-status').innerText = "⚠️ Sin conexión a internet";
+                document.getElementById('sync-status').style.color = "#e74c3c";
             });
         }
 
-        function descargarDeLaNube(silencioso = false) {
+        function descargarDeLaNubeAutomatico(mostrarAlertaExito = false) {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
-            if (!url) return;
-            
-            guardarEnDB('nubeUrl', url);
-            guardarEnDB('nubeToken', token);
+            if (!url || !token) return;
 
-            fetch(`${url}?token=${encodeURIComponent(token)}`)
+            document.getElementById('sync-status').innerText = "📥 Actualizando datos...";
+            document.getElementById('sync-status').style.color = "#2980b9";
+
+            const body = { token, accion: 'descargar' };
+
+            fetch(url, { method: 'POST', body: JSON.stringify(body) })
             .then(res => res.json())
-            .then(data => {
-                if (data.status === "error") {
-                    if (!silencioso) alert('Error de seguridad: ' + data.message);
+            .then(res => {
+                if (res.status === "error") {
+                    document.getElementById('sync-status').innerText = "🔴 Token incorrecto";
+                    document.getElementById('sync-status').style.color = "#e74c3c";
+                    if (mostrarAlertaExito) alert('Error: ' + res.message);
                     return;
                 }
-                if (!data || Object.keys(data).length === 0) return;
-                
-                productos = data.productos || {};
-                clientes = data.clientes || {};
-                ventasDelDia = data.ventasDelDia || [];
-                historialMensual = data.historialMensual || [];
 
-                guardarEnDB('productos', productos);
-                guardarEnDB('clientes', clientes);
-                guardarEnDB('ventasDelDia', ventasDelDia);
-                guardarEnDB('historialMensual', historialMensual);
+                const d = res.datos;
+                if (d) {
+                    if (d.productos) productos = convertirMatrizAObjetoProductos(d.productos);
+                    if (d.clientes) clientes = convertirMatrizAObjetoClientes(d.clientes);
+                    if (d.ventasDelDia) ventasDelDia = convertirMatrizAArrayVentas(d.ventasDelDia);
+                    if (d.historialMensual) historialMensual = convertirMatrizAArrayHistorial(d.historialMensual);
 
-                actualizarTablaProductos();
-                actualizarListaSugerencias();
-                actualizarTablaClientes();
-                actualizarSelectClientes();
-                actualizarVistaCorte();
-                actualizarVistaBalance();
-                if (!silencioso) alert('🔄 ¡Datos descargados y actualizados desde otros dispositivos!');
+                    guardarEnDB('productos', productos);
+                    guardarEnDB('clientes', clientes);
+                    guardarEnDB('ventasDelDia', ventasDelDia);
+                    guardarEnDB('historialMensual', historialMensual);
+
+                    actualizarTablaProductos();
+                    actualizarListaSugerencias();
+                    actualizarTablaClientes();
+                    actualizarSelectClientes();
+                    actualizarVistaCorte();
+                    actualizarVistaBalance();
+
+                    document.getElementById('sync-status').innerText = "🟢 Sincronizado con la nube";
+                    document.getElementById('sync-status').style.color = "#27ae60";
+                    if (mostrarAlertaExito) alert('¡Conexión establecida y datos sincronizados correctamente!');
+                }
             })
-            .catch(err => {
-                if (!silencioso) alert('Error al descargar: ' + err);
+            .catch(() => {
+                document.getElementById('sync-status').innerText = "⚠️ Sin conexión a internet";
+                document.getElementById('sync-status').style.color = "#e74c3c";
             });
         }
 
-        // CLIENTES, PRODUCTOS Y VENTAS CON SINCRONIZACIÓN INMEDIATA
+        // FUNCIONES DE CONVERSIÓN DE DATOS PARA GOOGLE SHEETS
+        function convertirObjetoAMatrizProductos(obj) {
+            let arr = [["codigo", "nombre", "costo", "precio", "stock", "imagen"]];
+            for (let k in obj) { arr.push([k, obj[k].nombre, obj[k].costo, obj[k].precio, obj[k].stock, obj[k].imagen || ""]); }
+            return arr;
+        }
+        function convertirMatrizAObjetoProductos(mat) {
+            let obj = {};
+            for (let i = 1; i < mat.length; i++) {
+                if (mat[i][0]) obj[mat[i][0]] = { nombre: mat[i][1], costo: parseFloat(mat[i][2]), precio: parseFloat(mat[i][3]), stock: parseInt(mat[i][4]), imagen: mat[i][5] };
+            }
+            return obj;
+        }
+        function convertirObjetoAMatrizClientes(obj) {
+            let arr = [["nombre", "telefono"]];
+            for (let k in obj) { arr.push([k, obj[k].telefono]); }
+            return arr;
+        }
+        function convertirMatrizAObjetoClientes(mat) {
+            let obj = {};
+            for (let i = 1; i < mat.length; i++) {
+                if (mat[i][0]) obj[mat[i][0]] = { telefono: mat[i][1] };
+            }
+            return obj;
+        }
+        function convertirArrayAMatrizVentas(arr) {
+            let mat = [["jsonVentas"]];
+            arr.forEach(v => mat.push([JSON.stringify(v)]));
+            return mat;
+        }
+        function convertirMatrizAArrayVentas(mat) {
+            let arr = [];
+            for (let i = 1; i < mat.length; i++) {
+                if (mat[i][0]) { try { arr.push(JSON.parse(mat[i][0])); } catch(e){} }
+            }
+            return arr;
+        }
+        function convertirArrayAMatrizHistorial(arr) {
+            let mat = [["jsonHistorial"]];
+            arr.forEach(h => mat.push([JSON.stringify(h)]));
+            return mat;
+        }
+        function convertirMatrizAArrayHistorial(mat) {
+            let arr = [];
+            for (let i = 1; i < mat.length; i++) {
+                if (mat[i][0]) { try { arr.push(JSON.parse(mat[i][0])); } catch(e){} }
+            }
+            return arr;
+        }
+
+        // ACCIONES DE CLIENTES, PRODUCTOS Y VENTAS (AUTOMATIZADAS)
         document.getElementById('form-cliente').addEventListener('submit', (e) => {
             e.preventDefault();
             const nombre = document.getElementById('cli-nombre').value.trim();
@@ -551,8 +632,7 @@
             actualizarTablaClientes();
             actualizarSelectClientes();
             e.target.reset();
-            subirALaNube(true); // Sincroniza en segundo plano
-            alert('Cliente guardado y sincronizado.');
+            subirALaNubeAutomatico(); // Sube solo de fondo
         });
 
         function eliminarCliente(nombre) {
@@ -561,7 +641,7 @@
                 guardarEnDB('clientes', clientes);
                 actualizarTablaClientes();
                 actualizarSelectClientes();
-                subirALaNube(true);
+                subirALaNubeAutomatico();
             }
         }
 
@@ -607,8 +687,7 @@
             actualizarTablaProductos();
             actualizarListaSugerencias();
             form.reset();
-            subirALaNube(true);
-            alert('Producto guardado y sincronizado en la nube.');
+            subirALaNubeAutomatico();
         }
 
         function eliminarProducto(codigo) {
@@ -617,7 +696,7 @@
                 guardarEnDB('productos', productos);
                 actualizarTablaProductos();
                 actualizarListaSugerencias();
-                subirALaNube(true);
+                subirALaNubeAutomatico();
             }
         }
 
@@ -714,10 +793,9 @@
             carrito = [];
             actualizarCarrito();
             
-            // Sincroniza la venta y descuento de stock a la nube inmediatamente para que los demás dispositivos lo vean
-            subirALaNube(true).then(() => {
-                alert('✅ Venta procesada y sincronizada globalmente.');
-            });
+            // Subida automática inmediata de fondo
+            subirALaNubeAutomatico();
+            alert('✅ Venta procesada y sincronizada de forma automática.');
         }
 
         function visualizarUltimoTicketPDF() {
@@ -768,7 +846,7 @@
             tbody.innerHTML = '';
             ventasDelDia.forEach((v, index) => {
                 ingresos += v.totalVenta; costos += v.totalCosto;
-                tbody.innerHTML += `<tr><td><small>${v.fechaHora}</small><br><strong>${v.cliente}</strong></td><td>$${v.totalVenta.toFixed(2)}</td><td>${v.metodoPago}</td><td><button type="button" class="btn-danger" style="padding:2px 5px;" onclick="ventasDelDia.splice(${index},1);guardarEnDB('ventasDelDia',ventasDelDia);actualizarVistaCorte();subirALaNube(true);">X</button></td></tr>`;
+                tbody.innerHTML += `<tr><td><small>${v.fechaHora}</small><br><strong>${v.cliente}</strong></td><td>$${v.totalVenta.toFixed(2)}</td><td>${v.metodoPago}</td><td><button type="button" class="btn-danger" style="padding:2px 5px;" onclick="ventasDelDia.splice(${index},1);guardarEnDB('ventasDelDia',ventasDelDia);actualizarVistaCorte();subirALaNubeAutomatico();">X</button></td></tr>`;
             });
             document.getElementById('cant-ventas').innerText = ventasDelDia.length;
             document.getElementById('total-ingresos').innerText = ingresos.toFixed(2);
@@ -791,8 +869,8 @@
                 ventasDelDia = [];
                 guardarEnDB('ventasDelDia', ventasDelDia);
                 actualizarVistaCorte();
-                subirALaNube(true);
-                alert('Caja cerrada y sincronizada.');
+                subirALaNubeAutomatico();
+                alert('Caja cerrada y sincronizada automáticamente.');
             }
         }
 

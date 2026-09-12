@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta con Google Drive</title>
+    <title>Punto de Venta Multi-dispositivo (Google Sheets)</title>
     <!-- Librería jsPDF para tickets -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f1f5f9; color: #333; display: flex; height: 100vh; overflow: hidden; }
         
-        /* BARRA LATERAL (SIDEBAR) - Izquierda, angosta (180px) */
         .sidebar {
             width: 180px;
             background-color: #1e293b;
@@ -21,12 +20,10 @@
             flex-shrink: 0;
             position: relative;
         }
-        /* Clase para ocultar el menú por defecto hacia la izquierda */
         .sidebar.collapsed {
             transform: translateX(-100%);
             margin-left: -180px;
         }
-        
         .sidebar-header {
             padding: 15px 10px;
             font-size: 1rem;
@@ -55,17 +52,9 @@
             text-align: left;
             transition: background 0.2s, color 0.2s;
         }
-        .tab-btn:hover {
-            background-color: #334155;
-            color: white;
-        }
-        .tab-btn.active {
-            background-color: #2563eb;
-            color: white;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+        .tab-btn:hover { background-color: #334155; color: white; }
+        .tab-btn.active { background-color: #2563eb; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
 
-        /* CONTENEDOR PRINCIPAL */
         .main-container {
             flex-grow: 1;
             display: flex;
@@ -81,8 +70,6 @@
             align-items: center;
             justify-content: space-between;
         }
-        
-        /* BOTÓN DE MENÚ UBICADO A LA DERECHA */
         .menu-toggle {
             background: #2563eb;
             color: white;
@@ -93,9 +80,7 @@
             font-size: 0.95rem;
             font-weight: bold;
         }
-        .menu-toggle:hover {
-            background: #1d4ed8;
-        }
+        .menu-toggle:hover { background: #1d4ed8; }
 
         .content-area {
             flex-grow: 1;
@@ -147,7 +132,6 @@
         .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; }
         .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
 
-        /* RESPONSIVO PARA MÓVILES */
         @media (max-width: 768px) {
             .sidebar {
                 position: absolute;
@@ -155,15 +139,12 @@
                 transform: translateX(-100%);
                 margin-left: 0 !important;
             }
-            .sidebar.open {
-                transform: translateX(0);
-            }
+            .sidebar.open { transform: translateX(0); }
         }
     </style>
 </head>
 <body>
 
-    <!-- BARRA LATERAL (DESLIZABLE DESDE LA IZQUIERDA) -->
     <div class="sidebar collapsed" id="sidebar">
         <div class="sidebar-header">📦 Menú Principal</div>
         <div class="sidebar-menu">
@@ -173,16 +154,14 @@
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-productos', this)">4. Productos</button>
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">5. Corte</button>
             <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">6. Mes</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-nube', this)">☁️ 7. Google Drive</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-reiniciar', this)">🔄 8. Reiniciar</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-nube', this)">☁️ 7. Sincronizar</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-reiniciar', this)">🔄 8. Seguridad</button>
         </div>
     </div>
 
-    <!-- CONTENEDOR PRINCIPAL -->
     <div class="main-container">
         <div class="topbar">
-            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Sistema de Caja</h1>
-            <!-- BOTÓN DE MENÚ UBICADO A LA DERECHA -->
+            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Punto de Venta Compartido</h1>
             <button class="menu-toggle" onclick="toggleSidebar()">☰ Menú</button>
         </div>
 
@@ -225,7 +204,7 @@
                         <p style="margin: 5px 0;"><strong>Cambio:</strong> $<span id="monto-cambio">0.00</span></p>
                     </div>
 
-                    <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta</button>
+                    <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta y Sincronizar</button>
                     <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="visualizarUltimoTicketPDF()" disabled style="margin-top: 5px;">Visualizar PDF Último Ticket</button>
                 </div>
             </div>
@@ -237,7 +216,7 @@
                     <form id="form-cliente">
                         <input type="text" id="cli-nombre" placeholder="Nombre completo o razón social" required>
                         <input type="text" id="cli-telefono" placeholder="Número telefónico" required>
-                        <button type="submit">Guardar Cliente</button>
+                        <button type="submit">Guardar y Sincronizar Cliente</button>
                     </form>
 
                     <h3 style="margin-top:20px; font-size: 1rem;">Lista de Clientes</h3>
@@ -256,7 +235,7 @@
             <div id="sec-balance" class="tab-content" style="display: none;">
                 <div class="card">
                     <h2>Balance General del Día</h2>
-                    <button type="button" onclick="actualizarVistaBalance()" class="btn-info">Actualizar Balance</button>
+                    <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Descargar Datos Nuevos de la Nube</button>
                     
                     <div class="corte-resumen">
                         <p><strong>Total Ingresos del Día:</strong> $<span id="balance-ingresos">0.00</span></p>
@@ -293,7 +272,7 @@
                         <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto:</label>
                         <input type="file" id="prod-imagen" accept="image/*">
 
-                        <button type="submit">Guardar Producto</button>
+                        <button type="submit">Guardar y Sincronizar Producto</button>
                     </form>
 
                     <div class="inversion-box">
@@ -316,7 +295,7 @@
             <div id="sec-corte" class="tab-content" style="display: none;">
                 <div class="card">
                     <h2>Corte de Caja del Día</h2>
-                    <button type="button" onclick="actualizarVistaCorte()" class="btn-info">Actualizar Corte</button>
+                    <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Actualizar con la Nube</button>
                     
                     <div class="corte-resumen">
                         <p><strong>Ventas Realizadas Hoy:</strong> <span id="cant-ventas">0</span></p>
@@ -336,7 +315,7 @@
                         </table>
                     </div>
                     <br>
-                    <button type="button" class="btn-danger" onclick="reiniciarDia()">Cerrar Caja (Guardar Día)</button>
+                    <button type="button" class="btn-danger" onclick="reiniciarDia()">Cerrar Caja (Sincronizar Corte)</button>
                 </div>
             </div>
 
@@ -366,47 +345,36 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN 7: GOOGLE DRIVE (APPS SCRIPT) -->
+            <!-- SECCIÓN 7: SINCRONIZACIÓN -->
             <div id="sec-nube" class="tab-content" style="display: none;">
                 <div class="card">
-                    <h2>Sincronización con Google Drive</h2>
+                    <h2>Conexión con Google Sheets</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Pega aquí la URL web de tu Google Apps Script para respaldar tus datos directamente en tu cuenta de Google Drive.
+                        Pega la URL de tu Apps Script y tu Clave Secreta en todos tus dispositivos para enlazarlos a la misma base de datos.
                     </p>
 
                     <label>URL de Google Apps Script:</label>
                     <input type="text" id="nube-database-url" placeholder="https://script.google.com/macros/s/.../exec">
                     
+                    <label>Clave o Token Secreto:</label>
+                    <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123">
+
                     <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <button type="button" class="btn-cloud" onclick="subirALaNube()">☁️ Subir a Google Drive</button>
-                        <button type="button" class="btn-info" onclick="descargarDeLaNube()">📥 Descargar de Google Drive</button>
+                        <button type="button" class="btn-cloud" onclick="subirALaNube()">☁️ Guardar / Sincronizar Cambios</button>
+                        <button type="button" class="btn-info" onclick="descargarDeLaNube()">📥 Descargar Datos Actualizados</button>
                     </div>
                 </div>
             </div>
 
-            <!-- SECCIÓN 8: REINICIAR / GESTIÓN DE SEGURIDAD Y GOOGLE DRIVE -->
+            <!-- SECCIÓN 8: SEGURIDAD -->
             <div id="sec-reiniciar" class="tab-content" style="display: none;">
                 <div class="card">
-                    <h2>🔄 Reiniciar y Restauración de Datos</h2>
-                    <p style="font-size: 0.9rem; color: #555;">
-                        Administra el restablecimiento de tu aplicación mediante tu NIP de seguridad configurado.
-                    </p>
-
+                    <h2>🔒 Seguridad Local del Dispositivo</h2>
                     <div id="contenedor-config-nip" style="background: #f8fafc; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
-                        <h3 style="font-size: 0.95rem; margin-top:0;">Configuración de NIP de Seguridad</h3>
+                        <h3 style="font-size: 0.95rem; margin-top:0;">NIP de Bloqueo Local</h3>
                         <p id="lbl-estado-nip" style="font-size: 0.85rem; color: #e74c3c;">Estado: NIP no configurado.</p>
-                        <input type="password" id="nuevo-nip" placeholder="Crear o cambiar NIP (Ej. 1234)">
-                        <button type="button" class="btn-info" onclick="guardarNIP()">Guardar / Actualizar NIP</button>
-                    </div>
-
-                    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
-
-                    <label>Ingresa tu NIP de seguridad:</label>
-                    <input type="password" id="nip-ingresado" placeholder="Introduce tu NIP">
-                    
-                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
-                        <button type="button" class="btn-danger" onclick="reiniciarAppConRespaldo()">⚠️ Respaldar en Google Drive y Borrar Celular</button>
-                        <button type="button" class="btn-info" onclick="descargarEInsertarDesdeNubeConNIP()">📥 Descargar Respaldo de Google Drive e Insertar</button>
+                        <input type="password" id="nuevo-nip" placeholder="Crear o cambiar NIP">
+                        <button type="button" class="btn-info" onclick="guardarNIP()">Guardar NIP</button>
                     </div>
                 </div>
             </div>
@@ -432,8 +400,7 @@
             }
         }
 
-        // Inicializar Base de Datos local (IndexedDB)
-        const request = indexedDB.open('PuntoVentaDriveDB', 2);
+        const request = indexedDB.open('PuntoVentaSheetDB', 2);
         request.onsuccess = function(event) {
             db = event.target.result;
             cargarDatosDesdeDB();
@@ -459,11 +426,15 @@
             store.get('clientes').onsuccess = (e) => { clientes = e.target.result || {}; actualizarTablaClientes(); actualizarSelectClientes(); };
             store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); };
             store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; };
-            store.get('nubeUrl').onsuccess = (e) => { if(e.target.result) document.getElementById('nube-database-url').value = e.target.result; };
-            store.get('nipSeguridad').onsuccess = (e) => { 
-                nipSeguridad = e.target.result || ""; 
-                actualizarInterfazNIP();
+            store.get('nubeUrl').onsuccess = (e) => { 
+                if(e.target.result) {
+                    document.getElementById('nube-database-url').value = e.target.result;
+                    // Auto-descargar al iniciar si ya hay URL configurada para tener lo último de otros dispositivos
+                    setTimeout(() => descargarDeLaNube(true), 1000);
+                }
             };
+            store.get('nubeToken').onsuccess = (e) => { if(e.target.result) document.getElementById('nube-token').value = e.target.result; };
+            store.get('nipSeguridad').onsuccess = (e) => { nipSeguridad = e.target.result || ""; actualizarInterfazNIP(); };
         }
 
         function actualizarInterfazNIP() {
@@ -472,7 +443,7 @@
                 lbl.innerText = "Estado: NIP configurado correctamente.";
                 lbl.style.color = "#27ae60";
             } else {
-                lbl.innerText = "Estado: NIP no configurado. (Establece uno antes de usar las acciones de seguridad)";
+                lbl.innerText = "Estado: NIP no configurado.";
                 lbl.style.color = "#e74c3c";
             }
         }
@@ -484,73 +455,67 @@
             guardarEnDB('nipSeguridad', nipSeguridad, () => {
                 actualizarInterfazNIP();
                 document.getElementById('nuevo-nip').value = '';
-                alert('¡NIP de seguridad guardado con éxito!');
+                alert('¡NIP guardado con éxito!');
             });
         }
 
-        function reiniciarAppConRespaldo() {
-            const nipIngresado = document.getElementById('nip-ingresado').value.trim();
-            if (!nipSeguridad) return alert('Primero debes configurar un NIP de seguridad en esta misma sección.');
-            if (nipIngresado !== nipSeguridad) return alert('NIP incorrecto. No se pueden borrar los datos.');
+        function cambiarPestana(idSeccion, boton) {
+            document.querySelectorAll('.tab-content').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            const seccionActiva = document.getElementById(idSeccion);
+            seccionActiva.style.display = 'block';
+            seccionActiva.classList.add('active');
+            boton.classList.add('active');
 
+            if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+            if (idSeccion === 'sec-balance') actualizarVistaBalance();
+            else if (idSeccion === 'sec-corte') actualizarVistaCorte();
+            else if (idSeccion === 'sec-mensual') { cargarOpcionesMeses(); actualizarVistaMensual(); }
+        }
+
+        // FUNCIONES DE SINCRONIZACIÓN AUTOMÁTICA CON LA NUBE
+        function subirALaNube(silencioso = false) {
             const url = document.getElementById('nube-database-url').value.trim();
-            if (!url) return alert('Debes configurar la URL de tu Google Apps Script para poder respaldar antes de borrar.');
+            const token = document.getElementById('nube-token').value.trim();
+            if (!url) return !silencioso && alert('Ingresa la URL de tu Google Apps Script.');
+            
+            guardarEnDB('nubeUrl', url);
+            guardarEnDB('nubeToken', token);
 
-            if (!confirm('¿Estás totalmente seguro? Se subirá el respaldo a tu Google Drive y se limpiará por completo la información de este dispositivo.')) return;
-
-            const datos = { productos, clientes, ventasDelDia, historialMensual };
-            fetch(url, {
+            const datos = { token, productos, clientes, ventasDelDia, historialMensual };
+            return fetch(url, {
                 method: 'POST',
                 body: JSON.stringify(datos)
             })
             .then(res => res.json())
             .then(response => {
                 if(response.status === "success") {
-                    const transaction = db.transaction(['almacen'], 'readwrite');
-                    const store = transaction.objectStore('almacen');
-                    const clearReq = store.clear();
-                    
-                    clearReq.onsuccess = () => {
-                        productos = {};
-                        clientes = {};
-                        ventasDelDia = [];
-                        historialMensual = [];
-                        carrito = [];
-                        nipSeguridad = "";
-                        
-                        actualizarTablaProductos();
-                        actualizarListaSugerencias();
-                        actualizarTablaClientes();
-                        actualizarSelectClientes();
-                        actualizarVistaCorte();
-                        actualizarVistaBalance();
-                        actualizarInterfazNIP();
-                        document.getElementById('nip-ingresado').value = '';
-                        
-                        alert('✅ Respaldo subido a Google Drive con éxito y datos del celular limpiados correctamente.');
-                        cambiarPestana('sec-ventas', document.querySelector('.tab-btn'));
-                    };
+                    if (!silencioso) alert('¡Datos sincronizados con éxito en Google Sheets!');
                 } else {
-                    alert('Error al respaldar en Google Drive. No se borró nada del dispositivo.');
+                    if (!silencioso) alert('Error: ' + (response.message || 'Token incorrecto'));
                 }
             })
-            .catch(err => alert('Error de conexión con Google Drive: ' + err));
+            .catch(err => {
+                if (!silencioso) alert('Error de conexión: ' + err);
+            });
         }
 
-        function descargarEInsertarDesdeNubeConNIP() {
-            const nipIngresado = document.getElementById('nip-ingresado').value.trim();
-            if (!nipSeguridad) return alert('Primero debes configurar un NIP de seguridad.');
-            if (nipIngresado !== nipSeguridad) return alert('NIP incorrecto. Acción denegada.');
-
+        function descargarDeLaNube(silencioso = false) {
             const url = document.getElementById('nube-database-url').value.trim();
-            if (!url) return alert('Ingresa o configura primero la URL de tu Google Apps Script.');
+            const token = document.getElementById('nube-token').value.trim();
+            if (!url) return;
+            
+            guardarEnDB('nubeUrl', url);
+            guardarEnDB('nubeToken', token);
 
-            if (!confirm('¿Deseas descargar los datos de Google Drive e insertarlos/sobrescribir la información actual en este celular?')) return;
-
-            fetch(url)
+            fetch(`${url}?token=${encodeURIComponent(token)}`)
             .then(res => res.json())
             .then(data => {
-                if (!data || Object.keys(data).length === 0) return alert('No hay datos disponibles en Google Drive para descargar.');
+                if (data.status === "error") {
+                    if (!silencioso) alert('Error de seguridad: ' + data.message);
+                    return;
+                }
+                if (!data || Object.keys(data).length === 0) return;
                 
                 productos = data.productos || {};
                 clientes = data.clientes || {};
@@ -568,47 +533,26 @@
                 actualizarSelectClientes();
                 actualizarVistaCorte();
                 actualizarVistaBalance();
-                document.getElementById('nip-ingresado').value = '';
-
-                alert('✅ ¡Datos descargados e insertados con éxito desde Google Drive!');
+                if (!silencioso) alert('🔄 ¡Datos descargados y actualizados desde otros dispositivos!');
             })
-            .catch(err => alert('Error al conectar con Google Drive: ' + err));
-        }
-
-        function cambiarPestana(idSeccion, boton) {
-            document.querySelectorAll('.tab-content').forEach(s => {
-                s.style.display = 'none';
-                s.classList.remove('active');
+            .catch(err => {
+                if (!silencioso) alert('Error al descargar: ' + err);
             });
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            
-            const seccionActiva = document.getElementById(idSeccion);
-            seccionActiva.style.display = 'block';
-            seccionActiva.classList.add('active');
-            boton.classList.add('active');
-
-            if (window.innerWidth <= 768) {
-                document.getElementById('sidebar').classList.remove('open');
-            }
-
-            if (idSeccion === 'sec-balance') actualizarVistaBalance();
-            else if (idSeccion === 'sec-corte') actualizarVistaCorte();
-            else if (idSeccion === 'sec-mensual') { cargarOpcionesMeses(); actualizarVistaMensual(); }
         }
 
-        // GESTIÓN DE CLIENTES
+        // CLIENTES, PRODUCTOS Y VENTAS CON SINCRONIZACIÓN INMEDIATA
         document.getElementById('form-cliente').addEventListener('submit', (e) => {
             e.preventDefault();
             const nombre = document.getElementById('cli-nombre').value.trim();
             const telefono = document.getElementById('cli-telefono').value.trim();
             if (!nombre || !telefono) return;
-
             clientes[nombre] = { telefono };
             guardarEnDB('clientes', clientes);
             actualizarTablaClientes();
             actualizarSelectClientes();
             e.target.reset();
-            alert('Cliente guardado localmente.');
+            subirALaNube(true); // Sincroniza en segundo plano
+            alert('Cliente guardado y sincronizado.');
         });
 
         function eliminarCliente(nombre) {
@@ -617,6 +561,7 @@
                 guardarEnDB('clientes', clientes);
                 actualizarTablaClientes();
                 actualizarSelectClientes();
+                subirALaNube(true);
             }
         }
 
@@ -634,7 +579,6 @@
             for (let nombre in clientes) select.innerHTML += `<option value="${nombre}">${nombre}</option>`;
         }
 
-        // PRODUCTOS
         document.getElementById('form-producto').addEventListener('submit', (e) => {
             e.preventDefault();
             const codigo = document.getElementById('prod-codigo').value.trim();
@@ -643,7 +587,6 @@
             const precio = parseFloat(document.getElementById('prod-precio').value);
             const stock = parseInt(document.getElementById('prod-stock').value);
             const inputImagen = document.getElementById('prod-imagen');
-
             let imagenBase64 = productos[codigo] ? productos[codigo].imagen : '';
 
             if (inputImagen.files && inputImagen.files[0]) {
@@ -664,7 +607,8 @@
             actualizarTablaProductos();
             actualizarListaSugerencias();
             form.reset();
-            alert('Producto guardado.');
+            subirALaNube(true);
+            alert('Producto guardado y sincronizado en la nube.');
         }
 
         function eliminarProducto(codigo) {
@@ -673,6 +617,7 @@
                 guardarEnDB('productos', productos);
                 actualizarTablaProductos();
                 actualizarListaSugerencias();
+                subirALaNube(true);
             }
         }
 
@@ -680,54 +625,42 @@
             const tbody = document.querySelector('#tabla-productos tbody');
             tbody.innerHTML = '';
             let inversionTotal = 0;
-
             for (let cod in productos) {
                 const p = productos[cod];
                 inversionTotal += (p.costo * p.stock);
                 const img = p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img';
                 tbody.innerHTML += `<tr><td>${img}</td><td>${cod}</td><td>${p.nombre}</td><td>$${p.costo.toFixed(2)}</td><td>$${p.precio.toFixed(2)}</td><td>${p.stock}</td><td><button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarProducto('${cod}')">🗑️</button></td></tr>`;
             }
-
             document.getElementById('inversion-total-inventario').innerText = inversionTotal.toFixed(2);
         }
 
         function actualizarListaSugerencias() {
             const datalist = document.getElementById('lista-sugerencias-productos');
             datalist.innerHTML = '';
-            for (let cod in productos) {
-                datalist.innerHTML += `<option value="${productos[cod].nombre}">`;
-            }
+            for (let cod in productos) datalist.innerHTML += `<option value="${productos[cod].nombre}">`;
         }
 
-        // VENTAS
         document.getElementById('form-venta').addEventListener('submit', (e) => {
             e.preventDefault();
             const termino = document.getElementById('venta-busqueda').value.trim().toLowerCase();
             let codigoEncontrado = null;
-
             if (productos[termino]) codigoEncontrado = termino;
             else {
                 for (let cod in productos) {
                     if (productos[cod].nombre.toLowerCase() === termino) codigoEncontrado = cod;
                 }
             }
-
-            if (!codigoEncontrado) {
-                alert('Producto no encontrado.');
-                return;
-            }
-
+            if (!codigoEncontrado) return alert('Producto no encontrado.');
             const p = productos[codigoEncontrado];
-            if (p.stock <= 0) { alert('Sin stock'); return; }
+            if (p.stock <= 0) return alert('Sin stock disponible');
 
             const enCarrito = carrito.find(i => i.codigo === codigoEncontrado);
             if (enCarrito) {
-                if (enCarrito.cantidad + 1 > p.stock) { alert('Stock insuficiente'); return; }
+                if (enCarrito.cantidad + 1 > p.stock) return alert('Stock insuficiente');
                 enCarrito.cantidad++;
             } else {
                 carrito.push({ codigo: codigoEncontrado, nombre: p.nombre, costo: p.costo, precio: p.precio, cantidad: 1 });
             }
-
             document.getElementById('venta-busqueda').value = '';
             actualizarCarrito();
         });
@@ -755,12 +688,11 @@
         }
 
         function procesarVenta() {
-            if (carrito.length === 0) return alert('Carrito vacío');
+            if (carrito.length === 0) return alert('El carrito está vacío');
             const totalVenta = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
             const totalCosto = carrito.reduce((s, i) => s + (i.costo * i.cantidad), 0);
             const metodo = document.getElementById('metodo-pago').value;
             const pagado = parseFloat(document.getElementById('monto-pagado').value) || totalVenta;
-
             if (metodo === 'Efectivo' && pagado < totalVenta) return alert('Pago insuficiente');
 
             carrito.forEach(i => productos[i.codigo].stock -= i.cantidad);
@@ -768,15 +700,11 @@
             actualizarTablaProductos();
 
             const venta = {
-                id: Date.now(),
-                fechaHora: new Date().toLocaleString(),
+                id: Date.now(), fechaHora: new Date().toLocaleString(),
                 cliente: document.getElementById('venta-cliente').value,
-                items: [...carrito],
-                totalVenta, totalCosto,
-                ganancia: totalVenta - totalCosto,
-                metodoPago: metodo, pagado, cambio: metodo === 'Efectivo' ? pagado - totalVenta : 0
+                items: [...carrito], totalVenta, totalCosto,
+                ganancia: totalVenta - totalCosto, metodoPago: metodo, pagado, cambio: metodo === 'Efectivo' ? pagado - totalVenta : 0
             };
-
             ventasDelDia.push(venta);
             guardarEnDB('ventasDelDia', ventasDelDia);
             ultimaVentaRealizada = venta;
@@ -785,7 +713,11 @@
             document.getElementById('btn-imprimir-ultimo').className = 'btn-info';
             carrito = [];
             actualizarCarrito();
-            alert('Venta procesada con éxito.');
+            
+            // Sincroniza la venta y descuento de stock a la nube inmediatamente para que los demás dispositivos lo vean
+            subirALaNube(true).then(() => {
+                alert('✅ Venta procesada y sincronizada globalmente.');
+            });
         }
 
         function visualizarUltimoTicketPDF() {
@@ -836,7 +768,7 @@
             tbody.innerHTML = '';
             ventasDelDia.forEach((v, index) => {
                 ingresos += v.totalVenta; costos += v.totalCosto;
-                tbody.innerHTML += `<tr><td><small>${v.fechaHora}</small><br><strong>${v.cliente}</strong></td><td>$${v.totalVenta.toFixed(2)}</td><td>${v.metodoPago}</td><td><button type="button" class="btn-danger" style="padding:2px 5px;" onclick="ventasDelDia.splice(${index},1);guardarEnDB('ventasDelDia',ventasDelDia);actualizarVistaCorte();">X</button></td></tr>`;
+                tbody.innerHTML += `<tr><td><small>${v.fechaHora}</small><br><strong>${v.cliente}</strong></td><td>$${v.totalVenta.toFixed(2)}</td><td>${v.metodoPago}</td><td><button type="button" class="btn-danger" style="padding:2px 5px;" onclick="ventasDelDia.splice(${index},1);guardarEnDB('ventasDelDia',ventasDelDia);actualizarVistaCorte();subirALaNube(true);">X</button></td></tr>`;
             });
             document.getElementById('cant-ventas').innerText = ventasDelDia.length;
             document.getElementById('total-ingresos').innerText = ingresos.toFixed(2);
@@ -859,7 +791,8 @@
                 ventasDelDia = [];
                 guardarEnDB('ventasDelDia', ventasDelDia);
                 actualizarVistaCorte();
-                alert('Caja cerrada con éxito.');
+                subirALaNube(true);
+                alert('Caja cerrada y sincronizada.');
             }
         }
 
@@ -884,59 +817,6 @@
             document.getElementById('mes-dias').innerText = filtrados.length;
             document.getElementById('mes-total-ingresos').innerText = ing.toFixed(2);
             document.getElementById('mes-total-ganancias').innerText = gan.toFixed(2);
-        }
-
-        // FUNCIONES DE GOOGLE DRIVE (APPS SCRIPT)
-        function subirALaNube() {
-            const url = document.getElementById('nube-database-url').value.trim();
-            if (!url) return alert('Ingresa la URL de tu Google Apps Script.');
-            guardarEnDB('nubeUrl', url);
-
-            const datos = { productos, clientes, ventasDelDia, historialMensual };
-            fetch(url, {
-                method: 'POST',
-                body: JSON.stringify(datos)
-            })
-            .then(res => res.json())
-            .then(response => {
-                if(response.status === "success") {
-                    alert('¡Datos respaldados en Google Drive correctamente!');
-                } else {
-                    alert('Error al guardar en Google Drive: ' + (response.message || 'Desconocido'));
-                }
-            })
-            .catch(err => alert('Error de conexión: ' + err));
-        }
-
-        function descargarDeLaNube() {
-            const url = document.getElementById('nube-database-url').value.trim();
-            if (!url) return alert('Ingresa la URL de tu Google Apps Script.');
-            guardarEnDB('nubeUrl', url);
-
-            fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                if (!data || Object.keys(data).length === 0) return alert('No hay datos guardados en Google Drive.');
-                
-                productos = data.productos || {};
-                clientes = data.clientes || {};
-                ventasDelDia = data.ventasDelDia || [];
-                historialMensual = data.historialMensual || [];
-
-                guardarEnDB('productos', productos);
-                guardarEnDB('clientes', clientes);
-                guardarEnDB('ventasDelDia', ventasDelDia);
-                guardarEnDB('historialMensual', historialMensual);
-
-                actualizarTablaProductos();
-                actualizarListaSugerencias();
-                actualizarTablaClientes();
-                actualizarSelectClientes();
-                actualizarVistaCorte();
-                actualizarVistaBalance();
-                alert('¡Datos descargados e insertados desde Google Drive con éxito!');
-            })
-            .catch(err => alert('Error al descargar: ' + err));
         }
     </script>
 </body>

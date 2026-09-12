@@ -3,143 +3,672 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Clientes</title>
+    <title>Punto de Venta con Nube Opcional</title>
+    <!-- Librería jsPDF para tickets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Firebase SDK (Realtime Database) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        .client-section {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            border: 1px solid #ddd;
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background: #f1f5f9; color: #333; }
+        h1 { font-size: 1.4rem; text-align: center; color: #2c3e50; margin-bottom: 15px; }
+        .nav-tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
+        .tab-btn {
+            min-width: 80px;
+            padding: 8px 6px;
+            background: transparent;
+            color: #475569;
+            border: none;
             border-radius: 8px;
-            background-color: #f9f9f9;
-        }
-        .client-section h2 {
-            text-align: center;
-            color: #333;
-        }
-        .client-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .form-group label {
             font-weight: bold;
-            color: #555;
+            font-size: 0.73rem;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            white-space: nowrap;
         }
-        .form-group input {
+        .tab-btn.active {
+            background-color: #2c3e50;
+            color: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h2 { font-size: 1.2rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; margin-top: 0; }
+        input, select, button, textarea {
+            width: 100%;
             padding: 10px;
+            margin: 6px 0;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
         }
-        .btn-submit {
-            padding: 10px;
-            background-color: #007bff;
+        button {
+            background-color: #27ae60;
             color: white;
             border: none;
-            border-radius: 4px;
-            font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
+            transition: background 0.2s;
         }
-        .btn-submit:hover {
-            background-color: #0056b3;
-        }
-        .client-table-container {
-            overflow-x: auto;
-        }
-        .client-table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: white;
-        }
-        .client-table th, .client-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        .client-table th {
-            background-color: #007bff;
-            color: white;
-        }
-        .client-table tr:hover {
-            background-color: #f1f1f1;
-        }
+        button:hover { background-color: #219150; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .btn-danger { background-color: #e74c3c; }
+        .btn-danger:hover { background-color: #c0392b; }
+        .btn-info { background-color: #2980b9; }
+        .btn-info:hover { background-color: #2471a3; }
+        .btn-secondary { background-color: #7f8c8d; }
+        .btn-secondary:hover { background-color: #6c757d; }
+        .btn-cloud { background-color: #0284c7; }
+        .btn-cloud:hover { background-color: #0369a1; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: middle; }
+        th { background-color: #f8fafc; color: #475569; }
+        .monto-total { font-size: 1.5rem; color: #2c3e50; font-weight: bold; text-align: right; margin: 10px 0; }
+        .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
+        .corte-resumen p { margin: 6px 0; font-size: 1rem; }
+        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
 
-    <div class="client-section">
-        <h2>Registro de Clientes</h2>
-        
-        <!-- Formulario de Registro -->
-        <form id="clientForm" class="client-form">
-            <div class="form-group">
-                <label for="clientName">Nombre del Cliente:</label>
-                <input type="text" id="clientName" required placeholder="Ej. Juan Pérez">
-            </div>
-            
-            <div class="form-group">
-                <label for="clientPhone">Número Telefónico:</label>
-                <input type="tel" id="clientPhone" required placeholder="Ej. 8112345678">
-            </div>
-            
-            <button type="submit" class="btn-submit">Registrar Cliente</button>
-        </form>
+    <h1>Punto de Venta (Nube Opcional)</h1>
 
-        <!-- Tabla de Clientes Registrados -->
-        <div class="client-table-container">
-            <table class="client-table">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Teléfono</th>
-                    </tr>
-                </thead>
-                <tbody id="clientTableBody">
-                    <!-- Los registros se agregarán aquí dinámicamente -->
-                </tbody>
-            </table>
+    <!-- BARRA DE NAVEGACIÓN -->
+    <div class="nav-tabs">
+        <button type="button" class="tab-btn active" onclick="cambiarPestana('sec-ventas', this)">1. Ventas</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-clientes', this)">2. Clientes</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-balance', this)">3. Balance</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-productos', this)">4. Productos</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">5. Corte</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">6. Mes</button>
+        <button type="button" class="tab-btn" onclick="cambiarPestana('sec-nube', this)">☁️ 7. Nube</button>
+    </div>
+
+    <!-- SECCIÓN 1: VENTAS -->
+    <div id="sec-ventas" class="tab-content active">
+        <div class="card">
+            <h2>Registro de Venta</h2>
+            <label>Cliente:</label>
+            <select id="venta-cliente">
+                <option value="Público General">Público General</option>
+            </select>
+
+            <form id="form-venta" style="margin-top: 10px;">
+                <input type="text" id="venta-busqueda" list="lista-sugerencias-productos" placeholder="Nombre o código del producto" required autocomplete="off">
+                <datalist id="lista-sugerencias-productos"></datalist>
+                <button type="submit" class="btn-info">Agregar Producto</button>
+            </form>
+
+            <div style="max-height: 200px; overflow-y: auto; margin-top:10px;">
+                <table id="tabla-carrito">
+                    <thead>
+                        <tr><th>Producto</th><th>Cant.</th><th>Subtotal</th><th>Acción</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="monto-total">Total: $<span id="total-venta">0.00</span></div>
+
+            <label>Forma de Pago:</label>
+            <select id="metodo-pago" onchange="cambiarMetodoPago()">
+                <option value="Efectivo">Efectivo</option>
+                <option value="Transferencia">Transferencia</option>
+                <option value="Tarjeta">Tarjeta</option>
+            </select>
+
+            <div id="contenedor-efectivo">
+                <input type="number" step="0.01" id="monto-pagado" placeholder="Monto Recibido ($)" oninput="calcularCambio()">
+                <p style="margin: 5px 0;"><strong>Cambio:</strong> $<span id="monto-cambio">0.00</span></p>
+            </div>
+
+            <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta</button>
+            <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="visualizarUltimoTicketPDF()" disabled style="margin-top: 5px;">Visualizar PDF Último Ticket</button>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 2: CLIENTES -->
+    <div id="sec-clientes" class="tab-content">
+        <div class="card">
+            <h2>Catálogo de Clientes</h2>
+            <form id="form-cliente">
+                <input type="text" id="cli-nombre" placeholder="Nombre completo o razón social" required>
+                <input type="text" id="cli-telefono" placeholder="Número telefónico" required>
+                <button type="submit">Guardar Cliente</button>
+            </form>
+
+            <h3 style="margin-top:20px; font-size: 1rem;">Lista de Clientes</h3>
+            <div style="max-height: 250px; overflow-y: auto;">
+                <table id="tabla-clientes">
+                    <thead>
+                        <tr><th>Nombre</th><th>Teléfono</th><th>Acción</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 3: BALANCE -->
+    <div id="sec-balance" class="tab-content">
+        <div class="card">
+            <h2>Balance General del Día</h2>
+            <button type="button" onclick="actualizarVistaBalance()" class="btn-info">Actualizar Balance</button>
+            
+            <div class="corte-resumen">
+                <p><strong>Total Ingresos del Día:</strong> $<span id="balance-ingresos">0.00</span></p>
+                <p><strong>Total Costo de Producto:</strong> $<span id="balance-egresos">0.00</span></p>
+                <hr>
+                <p style="color: #27ae60; font-size: 1.2rem;"><strong>Ganancia Neta Actual:</strong> $<span id="balance-ganancia">0.00</span></p>
+            </div>
+
+            <h3 style="font-size: 1rem; margin-top: 15px;">Desglose por Producto Vendido Hoy</h3>
+            <div style="max-height: 220px; overflow-y: auto;">
+                <table id="tabla-balance-productos">
+                    <thead>
+                        <tr><th>Producto</th><th>Cant.</th><th>Ingreso</th><th>Costo</th><th>Ganancia</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 4: PRODUCTOS -->
+    <div id="sec-productos" class="tab-content">
+        <div class="card">
+            <h2>Registro de Productos</h2>
+            <form id="form-producto">
+                <input type="text" id="prod-codigo" placeholder="Código de barras / ID" required>
+                <input type="text" id="prod-nombre" placeholder="Nombre del producto" required>
+                <div style="display: flex; gap: 8px;">
+                    <input type="number" step="0.01" id="prod-costo" placeholder="Costo ($)" required>
+                    <input type="number" step="0.01" id="prod-precio" placeholder="Precio ($)" required>
+                </div>
+                <input type="number" id="prod-stock" placeholder="Stock inicial" required>
+                
+                <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto:</label>
+                <input type="file" id="prod-imagen" accept="image/*">
+
+                <button type="submit">Guardar Producto</button>
+            </form>
+
+            <h3 style="margin-top:20px; font-size: 1rem;">Inventario Actual</h3>
+            <div style="max-height: 250px; overflow-y: auto;">
+                <table id="tabla-productos">
+                    <thead>
+                        <tr><th>Img</th><th>Código</th><th>Prod.</th><th>Costo</th><th>Precio</th><th>Stock</th><th>Acción</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 5: CORTE -->
+    <div id="sec-corte" class="tab-content">
+        <div class="card">
+            <h2>Corte de Caja del Día</h2>
+            <button type="button" onclick="actualizarVistaCorte()" class="btn-info">Actualizar Corte</button>
+            
+            <div class="corte-resumen">
+                <p><strong>Ventas Realizadas Hoy:</strong> <span id="cant-ventas">0</span></p>
+                <p><strong>Ingresos Brutos:</strong> $<span id="total-ingresos">0.00</span></p>
+                <p><strong>Costo Mercancía:</strong> $<span id="total-costos">0.00</span></p>
+                <hr>
+                <p style="color: #27ae60; font-size: 1.2rem;"><strong>Ganancia Neta:</strong> $<span id="total-ganancia">0.00</span></p>
+            </div>
+
+            <h3 style="font-size: 1rem;">Detalle de Ventas</h3>
+            <div style="max-height: 180px; overflow-y: auto;">
+                <table id="tabla-historial">
+                    <thead>
+                        <tr><th>Fecha/Cliente</th><th>Total</th><th>Pago</th><th>Acción</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <br>
+            <button type="button" class="btn-danger" onclick="reiniciarDia()">Cerrar Caja (Guardar Día)</button>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 6: MENSUAL -->
+    <div id="sec-mensual" class="tab-content">
+        <div class="card">
+            <h2>Historial Mensual</h2>
+            <label>Seleccionar Mes:</label>
+            <select id="select-mes-filtro" onchange="actualizarVistaMensual()"></select>
+
+            <div class="corte-resumen" style="background-color: #f0fdf4;">
+                <p><strong>Días Registrados:</strong> <span id="mes-dias">0</span></p>
+                <p><strong>Venta Total del Mes:</strong> $<span id="mes-total-ingresos">0.00</span></p>
+                <hr>
+                <p style="color: #166534; font-size: 1.25rem;"><strong>Ganancia Neta del Mes:</strong> $<span id="mes-total-ganancias">0.00</span></p>
+            </div>
+
+            <h3 style="font-size: 1rem; margin-top: 15px;">Cortes Diarios</h3>
+            <div style="max-height: 220px; overflow-y: auto;">
+                <table id="tabla-cortes-mensuales">
+                    <thead>
+                        <tr><th>Fecha</th><th>Ventas</th><th>Total ($)</th><th>Ganancia ($)</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 7: NUBE OPCIONAL -->
+    <div id="sec-nube" class="tab-content">
+        <div class="card">
+            <h2>Sincronización Opcional con la Nube</h2>
+            <p style="font-size: 0.9rem; color: #555;">
+                Por defecto, tus datos se guardan en el navegador. Si deseas respaldar tu información en la nube (para verla en otro dispositivo o protegerla), ingresa tus credenciales de Firebase y usa los botones de sincronización.
+            </p>
+
+            <label>Firebase Config (JSON o URL de tu base de datos):</label>
+            <input type="text" id="nube-database-url" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com">
+            
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button type="button" class="btn-cloud" onclick="subirALaNube()">☁️ Subir Datos a la Nube</button>
+                <button type="button" class="btn-info" onclick="descargarDeLaNube()">📥 Descargar de la Nube</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const clientForm = document.getElementById('clientForm');
-        const clientTableBody = document.getElementById('clientTableBody');
+        let db;
+        let productos = {};
+        let clientes = {};
+        let ventasDelDia = [];
+        let historialMensual = [];
+        let ultimaVentaRealizada = null;
+        let carrito = [];
 
-        clientForm.addEventListener('submit', function(e) {
-            e.preventDefault(); // Evita que la página se recargue
+        // Inicializar Base de Datos local (IndexedDB)
+        const request = indexedDB.open('PuntoVentaNubeDB', 2);
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            cargarDatosDesdeDB();
+        };
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains('almacen')) db.createObjectStore('almacen');
+        };
 
-            // Obtener los valores de los inputs
-            const name = document.getElementById('clientName').value;
-            const phone = document.getElementById('clientPhone').value;
+        function guardarEnDB(clave, valor, callback) {
+            if (!db) return;
+            const transaction = db.transaction(['almacen'], 'readwrite');
+            const store = transaction.objectStore('almacen');
+            const req = store.put(valor, clave);
+            req.onsuccess = () => { if (callback) callback(); };
+        }
 
-            // Crear una nueva fila en la tabla
-            const newRow = document.createElement('tr');
+        function cargarDatosDesdeDB() {
+            const transaction = db.transaction(['almacen'], 'readonly');
+            const store = transaction.objectStore('almacen');
 
-            const nameCell = document.createElement('td');
-            nameCell.textContent = name;
-            
-            const phoneCell = document.createElement('td');
-            phoneCell.textContent = phone;
+            store.get('productos').onsuccess = (e) => { productos = e.target.result || {}; actualizarTablaProductos(); actualizarListaSugerencias(); };
+            store.get('clientes').onsuccess = (e) => { clientes = e.target.result || {}; actualizarTablaClientes(); actualizarSelectClientes(); };
+            store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); };
+            store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; };
+            store.get('nubeUrl').onsuccess = (e) => { if(e.target.result) document.getElementById('nube-database-url').value = e.target.result; };
+        }
 
-            // Añadir las celdas a la fila
-            newRow.appendChild(nameCell);
-            newRow.appendChild(phoneCell);
+        function cambiarPestana(idSeccion, boton) {
+            document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(idSeccion).classList.add('active');
+            boton.classList.add('active');
 
-            // Añadir la fila al cuerpo de la tabla
-            clientTableBody.appendChild(newRow);
+            if (idSeccion === 'sec-balance') actualizarVistaBalance();
+            else if (idSeccion === 'sec-corte') actualizarVistaCorte();
+            else if (idSeccion === 'sec-mensual') { cargarOpcionesMeses(); actualizarVistaMensual(); }
+        }
 
-            // Limpiar el formulario
-            clientForm.reset();
+        // GESTIÓN DE CLIENTES
+        document.getElementById('form-cliente').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('cli-nombre').value.trim();
+            const telefono = document.getElementById('cli-telefono').value.trim();
+            if (!nombre || !telefono) return;
+
+            clientes[nombre] = { telefono };
+            guardarEnDB('clientes', clientes);
+            actualizarTablaClientes();
+            actualizarSelectClientes();
+            e.target.reset();
+            alert('Cliente guardado localmente.');
         });
-    </script>
 
+        function eliminarCliente(nombre) {
+            if (confirm(`¿Eliminar al cliente "${nombre}"?`)) {
+                delete clientes[nombre];
+                guardarEnDB('clientes', clientes);
+                actualizarTablaClientes();
+                actualizarSelectClientes();
+            }
+        }
+
+        function actualizarTablaClientes() {
+            const tbody = document.querySelector('#tabla-clientes tbody');
+            tbody.innerHTML = '';
+            for (let nombre in clientes) {
+                tbody.innerHTML += `<tr><td>${nombre}</td><td>${clientes[nombre].telefono}</td><td><button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarCliente('${nombre}')">🗑️</button></td></tr>`;
+            }
+        }
+
+        function actualizarSelectClientes() {
+            const select = document.getElementById('venta-cliente');
+            select.innerHTML = '<option value="Público General">Público General</option>';
+            for (let nombre in clientes) select.innerHTML += `<option value="${nombre}">${nombre}</option>`;
+        }
+
+        // PRODUCTOS
+        document.getElementById('form-producto').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const codigo = document.getElementById('prod-codigo').value.trim();
+            const nombre = document.getElementById('prod-nombre').value.trim();
+            const costo = parseFloat(document.getElementById('prod-costo').value);
+            const precio = parseFloat(document.getElementById('prod-precio').value);
+            const stock = parseInt(document.getElementById('prod-stock').value);
+            const inputImagen = document.getElementById('prod-imagen');
+
+            let imagenBase64 = productos[codigo] ? productos[codigo].imagen : '';
+
+            if (inputImagen.files && inputImagen.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    productos[codigo] = { nombre, costo, precio, stock, imagen: ev.target.result };
+                    finalizarGuardadoProducto(e.target);
+                };
+                reader.readAsDataURL(inputImagen.files[0]);
+            } else {
+                productos[codigo] = { nombre, costo, precio, stock, imagen: imagenBase64 };
+                finalizarGuardadoProducto(e.target);
+            }
+        });
+
+        function finalizarGuardadoProducto(form) {
+            guardarEnDB('productos', productos);
+            actualizarTablaProductos();
+            actualizarListaSugerencias();
+            form.reset();
+            alert('Producto guardado.');
+        }
+
+        function eliminarProducto(codigo) {
+            if (confirm('¿Eliminar producto?')) {
+                delete productos[codigo];
+                guardarEnDB('productos', productos);
+                actualizarTablaProductos();
+                actualizarListaSugerencias();
+            }
+        }
+
+        function actualizarTablaProductos() {
+            const tbody = document.querySelector('#tabla-productos tbody');
+            tbody.innerHTML = '';
+            for (let cod in productos) {
+                const p = productos[cod];
+                const img = p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img';
+                tbody.innerHTML += `<tr><td>${img}</td><td>${cod}</td><td>${p.nombre}</td><td>$${p.costo.toFixed(2)}</td><td>$${p.precio.toFixed(2)}</td><td>${p.stock}</td><td><button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarProducto('${cod}')">🗑️</button></td></tr>`;
+            }
+        }
+
+        function actualizarListaSugerencias() {
+            const datalist = document.getElementById('lista-sugerencias-productos');
+            datalist.innerHTML = '';
+            for (let cod in productos) {
+                datalist.innerHTML += `<option value="${productos[cod].nombre}">`;
+            }
+        }
+
+        // VENTAS
+        document.getElementById('form-venta').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const termino = document.getElementById('venta-busqueda').value.trim().toLowerCase();
+            let codigoEncontrado = null;
+
+            if (productos[termino]) codigoEncontrado = termino;
+            else {
+                for (let cod in productos) {
+                    if (productos[cod].nombre.toLowerCase() === termino) codigoEncontrado = cod;
+                }
+            }
+
+            if (!codigoEncontrado) {
+                alert('Producto no encontrado.');
+                return;
+            }
+
+            const p = productos[codigoEncontrado];
+            if (p.stock <= 0) { alert('Sin stock'); return; }
+
+            const enCarrito = carrito.find(i => i.codigo === codigoEncontrado);
+            if (enCarrito) {
+                if (enCarrito.cantidad + 1 > p.stock) { alert('Stock insuficiente'); return; }
+                enCarrito.cantidad++;
+            } else {
+                carrito.push({ codigo: codigoEncontrado, nombre: p.nombre, costo: p.costo, precio: p.precio, cantidad: 1 });
+            }
+
+            document.getElementById('venta-busqueda').value = '';
+            actualizarCarrito();
+        });
+
+        function actualizarCarrito() {
+            const tbody = document.querySelector('#tabla-carrito tbody');
+            tbody.innerHTML = '';
+            let total = 0;
+            carrito.forEach((item, index) => {
+                total += item.precio * item.cantidad;
+                tbody.innerHTML += `<tr><td>${item.nombre}</td><td>${item.cantidad}</td><td>$${(item.precio * item.cantidad).toFixed(2)}</td><td><button type="button" class="btn-danger" style="padding:2px 5px;" onclick="carrito.splice(${index},1);actualizarCarrito();">X</button></td></tr>`;
+            });
+            document.getElementById('total-venta').innerText = total.toFixed(2);
+            calcularCambio();
+        }
+
+        function cambiarMetodoPago() {
+            document.getElementById('contenedor-efectivo').style.display = document.getElementById('metodo-pago').value === 'Efectivo' ? 'block' : 'none';
+        }
+
+        function calcularCambio() {
+            const total = parseFloat(document.getElementById('total-venta').innerText) || 0;
+            const pagado = parseFloat(document.getElementById('monto-pagado').value) || 0;
+            document.getElementById('monto-cambio').innerText = (pagado - total >= 0 ? pagado - total : 0).toFixed(2);
+        }
+
+        function procesarVenta() {
+            if (carrito.length === 0) return alert('Carrito vacío');
+            const totalVenta = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
+            const totalCosto = carrito.reduce((s, i) => s + (i.costo * i.cantidad), 0);
+            const metodo = document.getElementById('metodo-pago').value;
+            const pagado = parseFloat(document.getElementById('monto-pagado').value) || totalVenta;
+
+            if (metodo === 'Efectivo' && pagado < totalVenta) return alert('Pago insuficiente');
+
+            carrito.forEach(i => productos[i.codigo].stock -= i.cantidad);
+            guardarEnDB('productos', productos);
+            actualizarTablaProductos();
+
+            const venta = {
+                id: Date.now(),
+                fechaHora: new Date().toLocaleString(),
+                cliente: document.getElementById('venta-cliente').value,
+                items: [...carrito],
+                totalVenta, totalCosto,
+                ganancia: totalVenta - totalCosto,
+                metodoPago: metodo, pagado, cambio: metodo === 'Efectivo' ? pagado - totalVenta : 0
+            };
+
+            ventasDelDia.push(venta);
+            guardarEnDB('ventasDelDia', ventasDelDia);
+            ultimaVentaRealizada = venta;
+            
+            document.getElementById('btn-imprimir-ultimo').disabled = false;
+            document.getElementById('btn-imprimir-ultimo').className = 'btn-info';
+            carrito = [];
+            actualizarCarrito();
+            alert('Venta procesada con éxito.');
+        }
+
+        function visualizarUltimoTicketPDF() {
+            if (!ultimaVentaRealizada) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, 100 + (ultimaVentaRealizada.items.length * 10)] });
+            doc.setFont("courier", "normal");
+            doc.setFontSize(8);
+            let y = 8;
+            doc.text("TICKET DE VENTA", 29, y, { align: "center" });
+            y += 6;
+            doc.text(`Fecha: ${ultimaVentaRealizada.fechaHora}`, 3, y); y += 4;
+            doc.text(`Cliente: ${ultimaVentaRealizada.cliente}`, 3, y); y += 6;
+            ultimaVentaRealizada.items.forEach(i => {
+                doc.text(`${i.nombre} x${i.cantidad}`, 3, y); y += 4;
+                doc.text(`$${(i.precio * i.cantidad).toFixed(2)}`, 55, y, { align: "right" }); y += 5;
+            });
+            doc.text(`TOTAL: $${ultimaVentaRealizada.totalVenta.toFixed(2)}`, 3, y);
+            window.open(URL.createObjectURL(doc.output('blob')), '_blank');
+        }
+
+        function actualizarVistaBalance() {
+            let ingresos = 0, egresos = 0, prodAgrupados = {};
+            ventasDelDia.forEach(v => {
+                ingresos += v.totalVenta; egresos += v.totalCosto;
+                v.items.forEach(i => {
+                    if (!prodAgrupados[i.codigo]) prodAgrupados[i.codigo] = { nombre: i.nombre, cant: 0, ing: 0, egr: 0 };
+                    prodAgrupados[i.codigo].cant += i.cantidad;
+                    prodAgrupados[i.codigo].ing += i.precio * i.cantidad;
+                    prodAgrupados[i.codigo].egr += i.costo * i.cantidad;
+                });
+            });
+            document.getElementById('balance-ingresos').innerText = ingresos.toFixed(2);
+            document.getElementById('balance-egresos').innerText = egresos.toFixed(2);
+            document.getElementById('balance-ganancia').innerText = (ingresos - egresos).toFixed(2);
+
+            const tbody = document.querySelector('#tabla-balance-productos tbody');
+            tbody.innerHTML = '';
+            for (let cod in prodAgrupados) {
+                const p = prodAgrupados[cod];
+                tbody.innerHTML += `<tr><td>${p.nombre}</td><td>${p.cant}</td><td>$${p.ing.toFixed(2)}</td><td>$${p.egr.toFixed(2)}</td><td>$${(p.ing - p.egr).toFixed(2)}</td></tr>`;
+            }
+        }
+
+        function actualizarVistaCorte() {
+            let ingresos = 0, costos = 0;
+            const tbody = document.querySelector('#tabla-historial tbody');
+            tbody.innerHTML = '';
+            ventasDelDia.forEach((v, index) => {
+                ingresos += v.totalVenta; costos += v.totalCosto;
+                tbody.innerHTML += `<tr><td><small>${v.fechaHora}</small><br><strong>${v.cliente}</strong></td><td>$${v.totalVenta.toFixed(2)}</td><td>${v.metodoPago}</td><td><button type="button" class="btn-danger" style="padding:2px 5px;" onclick="ventasDelDia.splice(${index},1);guardarEnDB('ventasDelDia',ventasDelDia);actualizarVistaCorte();">X</button></td></tr>`;
+            });
+            document.getElementById('cant-ventas').innerText = ventasDelDia.length;
+            document.getElementById('total-ingresos').innerText = ingresos.toFixed(2);
+            document.getElementById('total-costos').innerText = costos.toFixed(2);
+            document.getElementById('total-ganancia').innerText = (ingresos - costos).toFixed(2);
+        }
+
+        function reiniciarDia() {
+            if (ventasDelDia.length === 0) return alert('Sin ventas hoy.');
+            if (confirm('¿Cerrar caja y guardar en el historial mensual?')) {
+                const ahora = new Date();
+                const totalIngresos = ventasDelDia.reduce((s, v) => s + v.totalVenta, 0);
+                const totalGanancia = ventasDelDia.reduce((s, v) => s + v.ganancia, 0);
+                historialMensual.push({
+                    fechaCompleta: ahora.toLocaleDateString(),
+                    claveMes: `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`,
+                    cantVentas: ventasDelDia.length, totalIngresos, totalGanancia
+                });
+                guardarEnDB('historialMensual', historialMensual);
+                ventasDelDia = [];
+                guardarEnDB('ventasDelDia', ventasDelDia);
+                actualizarVistaCorte();
+                alert('Caja cerrada con éxito.');
+            }
+        }
+
+        function cargarOpcionesMeses() {
+            const select = document.getElementById('select-mes-filtro');
+            select.innerHTML = '';
+            [...new Set(historialMensual.map(c => c.claveMes))].forEach(m => {
+                select.innerHTML += `<option value="${m}">${m}</option>`;
+            });
+        }
+
+        function actualizarVistaMensual() {
+            const mes = document.getElementById('select-mes-filtro').value;
+            const filtrados = historialMensual.filter(c => c.claveMes === mes);
+            let ing = 0, gan = 0;
+            const tbody = document.querySelector('#tabla-cortes-mensuales tbody');
+            tbody.innerHTML = '';
+            filtrados.forEach(c => {
+                ing += c.totalIngresos; gan += c.totalGanancia;
+                tbody.innerHTML += `<tr><td>${c.fechaCompleta}</td><td>${c.cantVentas}</td><td>$${c.totalIngresos.toFixed(2)}</td><td>$${c.totalGanancia.toFixed(2)}</td></tr>`;
+            });
+            document.getElementById('mes-dias').innerText = filtrados.length;
+            document.getElementById('mes-total-ingresos').innerText = ing.toFixed(2);
+            document.getElementById('mes-total-ganancias').innerText = gan.toFixed(2);
+        }
+
+        // FUNCIONES DE NUBE (OPCIONAL)
+        function subirALaNube() {
+            const url = document.getElementById('nube-database-url').value.trim();
+            if (!url) return alert('Ingresa la URL de tu base de datos en la nube.');
+            guardarEnDB('nubeUrl', url);
+
+            const datos = { productos, clientes, ventasDelDia, historialMensual };
+            fetch(`${url}/datosPOS.json`, {
+                method: 'PUT',
+                body: JSON.stringify(datos),
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => {
+                if(res.ok) alert('¡Datos subidos a la nube correctamente!');
+                else alert('Error al subir los datos.');
+            })
+            .catch(err => alert('Error de conexión con la nube: ' + err));
+        }
+
+        function descargarDeLaNube() {
+            const url = document.getElementById('nube-database-url').value.trim();
+            if (!url) return alert('Ingresa la URL de tu base de datos en la nube.');
+            guardarEnDB('nubeUrl', url);
+
+            fetch(`${url}/datosPOS.json`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data) return alert('No hay datos guardados en la nube.');
+                productos = data.productos || {};
+                clientes = data.clientes || {};
+                ventasDelDia = data.ventasDelDia || [];
+                historialMensual = data.historialMensual || [];
+
+                guardarEnDB('productos', productos);
+                guardarEnDB('clientes', clientes);
+                guardarEnDB('ventasDelDia', ventasDelDia);
+                guardarEnDB('historialMensual', historialMensual);
+
+                actualizarTablaProductos();
+                actualizarListaSugerencias();
+                actualizarTablaClientes();
+                actualizarSelectClientes();
+                actualizarVistaCorte();
+                actualizarVistaBalance();
+                alert('¡Datos descargados y sincronizados desde la nube con éxito!');
+            })
+            .catch(err => alert('Error al descargar: ' + err));
+        }
+    </script>
 </body>
 </html>

@@ -1,13 +1,196 @@
-<!DOCTYPE html>
+html_content = '''<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta Híbrido (Online/Offline)</title>
-    <!-- Librería jsPDF para tickets -->
+    <title>Punto de Venta Híbrido (Online/Offline Inteligente)</title>
+    <!-- Librería jsPDF por si se requiere respaldo -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f1f5f9; color: #333; display: flex; height: 100vh; overflow: hidden; }
+        /* PANTALLA DE BIENVENIDA (SPLASH SCREEN) CON ESTILO DE OSO AMIGABLE */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        #splash-screen.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* DISEÑO Y ANIMACIÓN DEL OSO ESTILO ILUSTRACIÓN */
+        .bear-container {
+            position: relative;
+            width: 160px;
+            height: 180px;
+            margin-bottom: 25px;
+        }
+
+        /* CUERPO Y PANZA */
+        .bear-body {
+            position: absolute;
+            bottom: 0;
+            left: 25px;
+            width: 110px;
+            height: 110px;
+            background: #d97706; /* Tono café tierno y cálido */
+            border-radius: 50% 50% 45% 45%;
+            box-shadow: inset -8px -8px 0px rgba(0,0,0,0.08);
+        }
+        .bear-belly {
+            position: absolute;
+            bottom: 8px;
+            left: 20px;
+            width: 70px;
+            height: 75px;
+            background: #fef3c7; /* Panza cremosa */
+            border-radius: 50%;
+        }
+
+        /* CABEZAS Y OREJAS */
+        .bear-head {
+            position: absolute;
+            top: 15px;
+            left: 30px;
+            width: 100px;
+            height: 85px;
+            background: #d97706;
+            border-radius: 45% 45% 42% 42%;
+            box-shadow: inset -5px -5px 0px rgba(0,0,0,0.06);
+        }
+        .bear-ear {
+            position: absolute;
+            top: 5px;
+            width: 32px;
+            height: 32px;
+            background: #b45309;
+            border-radius: 50%;
+        }
+        .bear-ear.left { left: 8px; }
+        .bear-ear.right { right: 8px; }
+        
+        .bear-ear-inner {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 20px;
+            height: 20px;
+            background: #fef3c7;
+            border-radius: 50%;
+        }
+
+        /* ROSTRO: HOCICO, OJOS Y SONRISA */
+        .bear-snout {
+            position: absolute;
+            bottom: 12px;
+            left: 28px;
+            width: 44px;
+            height: 32px;
+            background: #fef3c7;
+            border-radius: 50%;
+        }
+        .bear-nose {
+            position: absolute;
+            top: 6px;
+            left: 14px;
+            width: 16px;
+            height: 11px;
+            background: #291808;
+            border-radius: 50% 50% 60% 60%;
+        }
+        .bear-smile {
+            position: absolute;
+            top: 18px;
+            left: 16px;
+            width: 12px;
+            height: 6px;
+            border-bottom: 3px solid #291808;
+            border-radius: 0 0 50% 50%;
+        }
+        .bear-eye {
+            position: absolute;
+            top: 26px;
+            width: 8px;
+            height: 9px;
+            background: #291808;
+            border-radius: 50%;
+        }
+        .bear-eye.left { left: 26px; }
+        .bear-eye.right { right: 26px; }
+
+        /* PATITA IZQUIERDA (QUIETA) */
+        .bear-paw-left {
+            position: absolute;
+            bottom: 25px;
+            left: 12px;
+            width: 28px;
+            height: 40px;
+            background: #d97706;
+            border-radius: 50%;
+            transform: rotate(-15deg);
+        }
+
+        /* PATITA DERECHA SALUDANDO (MÁS A LA IZQUIERDA Y GIRANDO UN POCO MÁS HACIA ARRIBA) */
+        @keyframes wavePivot {
+            0%   { transform: rotate(0deg); }
+            50%  { transform: rotate(-75deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .bear-paw-right {
+            position: absolute;
+            top: 85px;
+            left: 22px;
+            width: 30px;
+            height: 44px;
+            background: #d97706;
+            border-radius: 50% 50% 50% 50%;
+            transform-origin: top center;
+            animation: wavePivot 1.5s ease-in-out infinite;
+            z-index: 2;
+        }
+        .paw-pads {
+            position: absolute;
+            bottom: 4px;
+            left: 5px;
+            width: 20px;
+            height: 16px;
+            background: #fef3c7;
+            border-radius: 50%;
+        }
+
+        .splash-text {
+            color: #334155;
+            font-family: Arial, sans-serif;
+            font-size: 1.15rem;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        @keyframes fadeInApp {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f1f5f9;
+            color: #333;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            animation: fadeInApp 0.4s ease-out forwards;
+        }
         
         .sidebar {
             width: 180px;
@@ -50,10 +233,11 @@
             font-size: 0.85rem;
             cursor: pointer;
             text-align: left;
-            transition: background 0.2s, color 0.2s;
+            transition: background 0.2s, color 0.2s, transform 0.1s;
         }
         .tab-btn:hover { background-color: #334155; color: white; }
         .tab-btn.active { background-color: #2563eb; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .tab-btn:active { transform: scale(0.97); }
 
         .main-container {
             flex-grow: 1;
@@ -79,14 +263,29 @@
             cursor: pointer;
             font-size: 0.95rem;
             font-weight: bold;
+            transition: background 0.2s, transform 0.1s;
         }
         .menu-toggle:hover { background: #1d4ed8; }
+        .menu-toggle:active { transform: scale(0.95); }
 
         .content-area {
             flex-grow: 1;
             padding: 20px;
             overflow-y: auto;
         }
+
+        .tab-content {
+            display: none;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         .card {
             background: #ffffff;
             padding: 20px;
@@ -94,6 +293,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             max-width: 800px;
             margin: 0 auto;
+            transition: box-shadow 0.2s;
         }
         h2 { font-size: 1.2rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; margin-top: 0; }
         input, select, button, textarea {
@@ -104,32 +304,61 @@
             border-radius: 6px;
             font-size: 0.95rem;
             box-sizing: border-box;
+            transition: border-color 0.2s;
         }
+        input:focus, select:focus { border-color: #2563eb; outline: none; }
+        
         button {
             background-color: #27ae60;
             color: white;
             border: none;
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.1s;
         }
         button:hover { background-color: #219150; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
+        
         .btn-danger { background-color: #e74c3c; }
         .btn-danger:hover { background-color: #c0392b; }
         .btn-info { background-color: #2980b9; }
         .btn-info:hover { background-color: #2471a3; }
         .btn-secondary { background-color: #7f8c8d; }
         .btn-secondary:hover { background-color: #6c757d; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
         th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: middle; }
         th { background-color: #f8fafc; color: #475569; }
         .monto-total { font-size: 1.5rem; color: #2c3e50; font-weight: bold; text-align: right; margin: 10px 0; }
         .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
         .corte-resumen p { margin: 6px 0; font-size: 1rem; }
-        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; }
+        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; }
         .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
         .sync-indicator { font-size: 0.8rem; color: #27ae60; font-weight: bold; text-align: right; margin-bottom: 5px; }
+
+        /* MODAL DE VISUALIZACIÓN DE TICKET */
+        #modal-ticket {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .ticket-modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            width: 320px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: #000;
+        }
 
         @media (max-width: 768px) {
             .sidebar {
@@ -140,9 +369,60 @@
             }
             .sidebar.open { transform: translateX(0); }
         }
+
+        /* ESTILOS EXCLUSIVOS PARA IMPRESIÓN DE TICKETS TÉRMICOS */
+        #print-ticket-container { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #print-ticket-container, #print-ticket-container * { visibility: visible; }
+            #print-ticket-container {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 58mm;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 11px;
+                color: #000;
+                background: #fff;
+                padding: 5px;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- PANTALLA DE CARGA CON EL OSO TIERNO SALUDANDO -->
+    <div id="splash-screen">
+        <div class="bear-container">
+            <div class="bear-body">
+                <div class="bear-belly"></div>
+            </div>
+            <div class="bear-paw-left"></div>
+            <div class="bear-ear left"><div class="bear-ear-inner"></div></div>
+            <div class="bear-ear right"><div class="bear-ear-inner"></div></div>
+            <div class="bear-head">
+                <div class="bear-eye left"></div>
+                <div class="bear-eye right"></div>
+                <div class="bear-snout">
+                    <div class="bear-nose"></div>
+                    <div class="bear-smile"></div>
+                </div>
+            </div>
+            <div class="bear-paw-right">
+                <div class="paw-pads"></div>
+            </div>
+        </div>
+        <div class="splash-text">¡Hola! Cargando tus datos locales...</div>
+    </div>
+
+    <!-- MODAL PARA VISUALIZAR TICKET -->
+    <div id="modal-ticket">
+        <div class="ticket-modal-content">
+            <div id="ticket-visual-body"></div>
+            <button type="button" class="btn-secondary" onclick="cerrarModalTicket()" style="margin-top: 15px;">Volver</button>
+        </div>
+    </div>
 
     <div class="sidebar collapsed" id="sidebar">
         <div class="sidebar-header">📦 Menú Principal</div>
@@ -206,12 +486,23 @@
                     </div>
 
                     <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta</button>
-                    <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="visualizarUltimoTicketPDF()" disabled style="margin-top: 5px;">Visualizar PDF Último Ticket</button>
+                    <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="imprimirUltimoTicket()" disabled style="margin-top: 5px;">Imprimir Último Ticket</button>
+
+                    <!-- APARTADO PARA VISUALIZAR EL TICKET DE CADA VENTA DEL DÍA -->
+                    <h3 style="margin-top: 25px; font-size: 1rem;">Tickets de Ventas Realizadas Hoy</h3>
+                    <div style="max-height: 220px; overflow-y: auto;">
+                        <table id="tabla-ventas-dia-tickets">
+                            <thead>
+                                <tr><th>Hora / Cliente</th><th>Total</th><th>Visualizar Ticket</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <!-- SECCIÓN 2: CLIENTES -->
-            <div id="sec-clientes" class="tab-content" style="display: none;">
+            <div id="sec-clientes" class="tab-content">
                 <div class="card">
                     <h2>Catálogo de Clientes</h2>
                     <form id="form-cliente">
@@ -233,7 +524,7 @@
             </div>
 
             <!-- SECCIÓN 3: BALANCE -->
-            <div id="sec-balance" class="tab-content" style="display: none;">
+            <div id="sec-balance" class="tab-content">
                 <div class="card">
                     <h2>Balance General del Día</h2>
                     <div class="corte-resumen">
@@ -256,7 +547,7 @@
             </div>
 
             <!-- SECCIÓN 4: PRODUCTOS -->
-            <div id="sec-productos" class="tab-content" style="display: none;">
+            <div id="sec-productos" class="tab-content">
                 <div class="card">
                     <h2>Registro de Productos</h2>
                     <form id="form-producto">
@@ -291,7 +582,7 @@
             </div>
 
             <!-- SECCIÓN 5: CORTE -->
-            <div id="sec-corte" class="tab-content" style="display: none;">
+            <div id="sec-corte" class="tab-content">
                 <div class="card">
                     <h2>Corte de Caja del Día</h2>
                     <div class="corte-resumen">
@@ -317,7 +608,7 @@
             </div>
 
             <!-- SECCIÓN 6: MENSUAL -->
-            <div id="sec-mensual" class="tab-content" style="display: none;">
+            <div id="sec-mensual" class="tab-content">
                 <div class="card">
                     <h2>Historial Mensual</h2>
                     <label>Seleccionar Mes:</label>
@@ -343,7 +634,7 @@
             </div>
 
             <!-- SECCIÓN 7: CONFIGURACIÓN DE NUBE -->
-            <div id="sec-nube" class="tab-content" style="display: none;">
+            <div id="sec-nube" class="tab-content">
                 <div class="card">
                     <h2>Configuración de Conexión Automática</h2>
                     <p style="font-size: 0.9rem; color: #555;">
@@ -356,12 +647,12 @@
                     <label>Clave o Token Secreto:</label>
                     <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123">
 
-                    <button type="button" class="btn-info" onclick="guardarCredencialesNube()" style="margin-top: 10px;">Guardar Configuración y Probar</button>
+                    <button type="button" class="btn-info" onclick="guardarCredencialesNube()" style="margin-top: 10px;">Guardar Configuración y Probar Conexión</button>
                 </div>
             </div>
 
             <!-- SECCIÓN 8: SEGURIDAD -->
-            <div id="sec-reiniciar" class="tab-content" style="display: none;">
+            <div id="sec-reiniciar" class="tab-content">
                 <div class="card">
                     <h2>🔒 Seguridad Local del Dispositivo</h2>
                     <div id="contenedor-config-nip" style="background: #f8fafc; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
@@ -375,16 +666,20 @@
         </div>
     </div>
 
+    <!-- CONTENEDOR OCULTO PARA IMPRESIÓN TÉRMICA -->
+    <div id="print-ticket-container"></div>
+
     <script>
         let db;
         let productos = {};
         let clientes = {};
         let ventasDelDia = [];
         let historialMensual = [];
-        let ultimaVentaRealizada = null;
         let carrito = [];
+        let ultimaVentaRealizada = null;
         let nipSeguridad = "";
         let ultimaHuellaNube = "";
+        let verificacionNubeIntentada = false;
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -398,8 +693,18 @@
         const request = indexedDB.open('PuntoVentaSheetAutoDB', 2);
         request.onsuccess = function(event) {
             db = event.target.result;
-            // PRIMERO CARGAR LOCALMENTE PARA QUE ABRA SIN INTERNET DE FORMA INMEDIATA
-            cargarDatosLocalesYrenderizar();
+            // 1. CARGA INMEDIATA Y 100% OFFLINE CON LO ÚLTIMO GUARDADO LOCALMENTE
+            cargarDatosLocalesYrenderizar(() => {
+                // Quitar la pantalla de carga del oso inmediatamente después de renderizar localmente
+                setTimeout(() => {
+                    const splash = document.getElementById('splash-screen');
+                    splash.classList.add('fade-out');
+                }, 400);
+
+                // 2. UNA VEZ INICIADO, INTENTAR CONECTAR A LA NUBE UNA SOLA VEZ
+                // (Evita gasto continuo de datos móviles y bloqueos si no hay internet)
+                intentarSincronizacionInicialEnSegundoPlano();
+            });
         };
         request.onupgradeneeded = function(event) {
             db = event.target.result;
@@ -414,26 +719,82 @@
             req.onsuccess = () => { if (callback) callback(); };
         }
 
-        // CARGA 100% LOCAL (Funciona sin internet al instante)
-        function cargarDatosLocalesYrenderizar() {
+        function cargarDatosLocalesYrenderizar(callbackFin) {
             const transaction = db.transaction(['almacen'], 'readonly');
             const store = transaction.objectStore('almacen');
 
-            store.get('productos').onsuccess = (e) => { productos = e.target.result || {}; actualizarTablaProductos(); actualizarListaSugerencias(); };
-            store.get('clientes').onsuccess = (e) => { clientes = e.target.result || {}; actualizarTablaClientes(); actualizarSelectClientes(); };
-            store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); };
-            store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; };
+            let completados = 0;
+            const verificarFin = () => {
+                completados++;
+                if (completados >= 6 && callbackFin) callbackFin();
+            };
+
+            store.get('productos').onsuccess = (e) => { productos = e.target.result || {}; actualizarTablaProductos(); actualizarListaSugerencias(); verificarFin(); };
+            store.get('clientes').onsuccess = (e) => { clientes = e.target.result || {}; actualizarTablaClientes(); actualizarSelectClientes(); verificarFin(); };
+            store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); actualizarTablaTicketsVentasDia(); verificarFin(); };
+            store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; verificarFin(); };
             store.get('nubeUrl').onsuccess = (e) => { 
                 if(e.target.result) document.getElementById('nube-database-url').value = e.target.result;
+                verificarFin();
             };
             store.get('nubeToken').onsuccess = (e) => { 
-                if(e.target.result) {
-                    document.getElementById('nube-token').value = e.target.result;
-                    // DESPUÉS DE CARGAR LOCAL, INTENTA ACTUALIZAR DE LA NUBE EN SEGUNDO PLANO (SI HAY RED)
-                    descargarDeLaNubeAutomatico(false);
-                }
+                if(e.target.result) document.getElementById('nube-token').value = e.target.result;
+                verificarFin();
             };
             store.get('nipSeguridad').onsuccess = (e) => { nipSeguridad = e.target.result || ""; actualizarInterfazNIP(); };
+        }
+
+        function intentarSincronizacionInicialEnSegundoPlano() {
+            if (verificacionNubeIntentada) return;
+            verificacionNubeIntentada = true;
+
+            const url = document.getElementById('nube-database-url').value.trim();
+            const token = document.getElementById('nube-token').value.trim();
+            if (!url || !token) return; // Si no hay credenciales configuradas, se queda en modo local sin intentar
+
+            document.getElementById('sync-status').innerText = "☁️ Comprobando conexión con la nube...";
+            document.getElementById('sync-status').style.color = "#d97706";
+
+            const body = { token, accion: 'descargar' };
+
+            fetch(url, { method: 'POST', body: JSON.stringify(body) })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === "success" && res.datos) {
+                    const d = res.datos;
+                    const huellaEntrante = JSON.stringify(d);
+                    ultimaHuellaNube = huellaEntrante;
+
+                    if (d.productos) productos = convertirMatrizAObjetoProductos(d.productos);
+                    if (d.clientes) clientes = convertirMatrizAObjetoClientes(d.clientes);
+                    if (d.ventasDelDia) ventasDelDia = convertirMatrizAArrayVentas(d.ventasDelDia);
+                    if (d.historialMensual) historialMensual = convertirMatrizAArrayHistorial(d.historialMensual);
+
+                    guardarEnDB('productos', productos);
+                    guardarEnDB('clientes', clientes);
+                    guardarEnDB('ventasDelDia', ventasDelDia);
+                    guardarEnDB('historialMensual', historialMensual);
+
+                    actualizarTablaProductos();
+                    actualizarListaSugerencias();
+                    actualizarTablaClientes();
+                    actualizarSelectClientes();
+                    actualizarVistaCorte();
+                    actualizarVistaBalance();
+                    actualizarTablaTicketsVentasDia();
+
+                    document.getElementById('sync-status').innerText = "🟢 Sincronizado con la nube";
+                    document.getElementById('sync-status').style.color = "#27ae60";
+                } else {
+                    document.getElementById('sync-status').innerText = "🟢 Modo Local (Sin cambios en nube)";
+                    document.getElementById('sync-status').style.color = "#27ae60";
+                }
+            })
+            .catch(() => {
+                // Si falla (sin internet), se mantiene intacto con lo último recibido localmente sin reintentar molestamente
+                document.getElementById('sync-status').innerText = "📴 Sin internet (Modo Local activo)";
+                document.getElementById('sync-status').style.color = "#27ae60";
+            });
         }
 
         function actualizarInterfazNIP() {
@@ -459,18 +820,19 @@
         }
 
         function cambiarPestana(idSeccion, boton) {
-            document.querySelectorAll('.tab-content').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(s => {
+                s.classList.remove('active');
+                setTimeout(() => { if (!s.classList.contains('active')) s.style.display = 'none'; }, 300);
+            });
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
             const seccionActiva = document.getElementById(idSeccion);
             seccionActiva.style.display = 'block';
-            seccionActiva.classList.add('active');
+            setTimeout(() => seccionActiva.classList.add('active'), 10);
+            
             boton.classList.add('active');
 
             if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
-            
-            if (idSeccion === 'sec-balance' || idSeccion === 'sec-corte' || idSeccion === 'sec-ventas') {
-                descargarDeLaNubeAutomatico(false);
-            }
 
             if (idSeccion === 'sec-balance') actualizarVistaBalance();
             else if (idSeccion === 'sec-corte') actualizarVistaCorte();
@@ -484,10 +846,11 @@
             
             guardarEnDB('nubeUrl', url);
             guardarEnDB('nubeToken', token);
-            descargarDeLaNubeAutomatico(true);
+            verificacionNubeIntentada = false;
+            intentarSincronizacionInicialEnSegundoPlano();
+            alert('¡Configuración guardada! Comprobando conexión...');
         }
 
-        // SUBIDA A LA NUBE (Falla de forma silenciosa si no hay internet sin afectar la venta local)
         function subirALaNubeAutomatico() {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
@@ -518,69 +881,11 @@
                 }
             })
             .catch(() => {
-                // SI NO HAY INTERNET, SE QUEDA EN MODO LOCAL SIN AFECTAR AL USUARIO
                 document.getElementById('sync-status').innerText = "📴 Sin internet (Modo Local guardado)";
-                document.getElementById('sync-status').style.color = "#d97706";
+                document.getElementById('sync-status').style.color = "#27ae60";
             });
         }
 
-        // DESCARGA INTELIGENTE (Detecta si hay internet; si no hay, opera silenciosamente sin congelar nada)
-        function descargarDeLaNubeAutomatico(mostrarAlertaExito = false) {
-            const url = document.getElementById('nube-database-url').value.trim();
-            const token = document.getElementById('nube-token').value.trim();
-            if (!url || !token) return;
-
-            const body = { token, accion: 'descargar' };
-
-            fetch(url, { method: 'POST', body: JSON.stringify(body) })
-            .then(res => res.json())
-            .then(res => {
-                if (res.status === "error") {
-                    if (mostrarAlertaExito) alert('Error: ' + res.message);
-                    return;
-                }
-
-                const d = res.datos;
-                if (d) {
-                    const huellaEntrante = JSON.stringify(d);
-                    if (huellaEntrante === ultimaHuellaNube && !mostrarAlertaExito) {
-                        document.getElementById('sync-status').innerText = "🟢 Sin cambios (Ahorro de datos)";
-                        document.getElementById('sync-status').style.color = "#27ae60";
-                        return;
-                    }
-
-                    ultimaHuellaNube = huellaEntrante;
-
-                    if (d.productos) productos = convertirMatrizAObjetoProductos(d.productos);
-                    if (d.clientes) clientes = convertirMatrizAObjetoClientes(d.clientes);
-                    if (d.ventasDelDia) ventasDelDia = convertirMatrizAArrayVentas(d.ventasDelDia);
-                    if (d.historialMensual) historialMensual = convertirMatrizAArrayHistorial(d.historialMensual);
-
-                    guardarEnDB('productos', productos);
-                    guardarEnDB('clientes', clientes);
-                    guardarEnDB('ventasDelDia', ventasDelDia);
-                    guardarEnDB('historialMensual', historialMensual);
-
-                    actualizarTablaProductos();
-                    actualizarListaSugerencias();
-                    actualizarTablaClientes();
-                    actualizarSelectClientes();
-                    actualizarVistaCorte();
-                    actualizarVistaBalance();
-
-                    document.getElementById('sync-status').innerText = "🟢 Sincronizado con la nube";
-                    document.getElementById('sync-status').style.color = "#27ae60";
-                    if (mostrarAlertaExito) alert('¡Conexión establecida y datos sincronizados correctamente!');
-                }
-            })
-            .catch(() => {
-                // SI NO HAY INTERNET AL INTENTAR DESCARGAR, LA APP IGNORA EL ERROR Y SIGUE FUNCIONANDO CON LO LOCAL
-                document.getElementById('sync-status').innerText = "📴 Sin internet (Usando datos locales)";
-                document.getElementById('sync-status').style.color = "#d97706";
-            });
-        }
-
-        // FUNCIONES DE CONVERSIÓN DE DATOS PARA GOOGLE SHEETS
         function convertirObjetoAMatrizProductos(obj) {
             let arr = [["codigo", "nombre", "costo", "precio", "stock", "imagen"]];
             for (let k in obj) { arr.push([k, obj[k].nombre, obj[k].costo, obj[k].precio, obj[k].stock, obj[k].imagen || ""]); }
@@ -630,7 +935,6 @@
             return arr;
         }
 
-        // ACCIONES DE CLIENTES, PRODUCTOS Y VENTAS (AUTOMATIZADAS Y FUNCIONALES OFFLINE)
         document.getElementById('form-cliente').addEventListener('submit', (e) => {
             e.preventDefault();
             const nombre = document.getElementById('cli-nombre').value.trim();
@@ -709,6 +1013,28 @@
             }
         }
 
+        function cambiarImagenInventario(codigo) {
+            const inputTemp = document.createElement('input');
+            inputTemp.type = 'file';
+            inputTemp.accept = 'image/*';
+            inputTemp.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        if (productos[codigo]) {
+                            productos[codigo].imagen = ev.target.result;
+                            guardarEnDB('productos', productos);
+                            actualizarTablaProductos();
+                            subirALaNubeAutomatico();
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            inputTemp.click();
+        }
+
         function actualizarTablaProductos() {
             const tbody = document.querySelector('#tabla-productos tbody');
             tbody.innerHTML = '';
@@ -716,7 +1042,7 @@
             for (let cod in productos) {
                 const p = productos[cod];
                 inversionTotal += (p.costo * p.stock);
-                const img = p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img';
+                const img = p.imagen ? `<img src="${p.imagen}" class="img-preview-table" title="Clic para cambiar imagen" onclick="cambiarImagenInventario('${cod}')">` : `<button type="button" class="btn-info" style="padding:2px 4px; font-size:0.75rem; width:auto;" onclick="cambiarImagenInventario('${cod}')">+Img</button>`;
                 tbody.innerHTML += `<tr><td>${img}</td><td>${cod}</td><td>${p.nombre}</td><td>$${p.costo.toFixed(2)}</td><td>$${p.precio.toFixed(2)}</td><td>${p.stock}</td><td><button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarProducto('${cod}')">🗑️</button></td></tr>`;
             }
             document.getElementById('inversion-total-inventario').innerText = inversionTotal.toFixed(2);
@@ -795,34 +1121,96 @@
             };
             ventasDelDia.push(venta);
             guardarEnDB('ventasDelDia', ventasDelDia);
-            ultimaVentaRealizada = venta;
             
-            document.getElementById('btn-imprimir-ultimo').disabled = false;
-            document.getElementById('btn-imprimir-ultimo').className = 'btn-info';
+            ultimaVentaRealizada = venta;
+            const btnImprimir = document.getElementById('btn-imprimir-ultimo');
+            btnImprimir.disabled = false;
+            btnImprimir.className = 'btn-info';
+
             carrito = [];
             actualizarCarrito();
-            
+            actualizarTablaTicketsVentasDia();
             subirALaNubeAutomatico();
-            alert('✅ Venta procesada exitosamente en el dispositivo.');
+
+            visualizarTicket(venta);
         }
 
-        function visualizarUltimoTicketPDF() {
-            if (!ultimaVentaRealizada) return;
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [58, 100 + (ultimaVentaRealizada.items.length * 10)] });
-            doc.setFont("courier", "normal");
-            doc.setFontSize(8);
-            let y = 8;
-            doc.text("TICKET DE VENTA", 29, y, { align: "center" });
-            y += 6;
-            doc.text(`Fecha: ${ultimaVentaRealizada.fechaHora}`, 3, y); y += 4;
-            doc.text(`Cliente: ${ultimaVentaRealizada.cliente}`, 3, y); y += 6;
-            ultimaVentaRealizada.items.forEach(i => {
-                doc.text(`${i.nombre} x${i.cantidad}`, 3, y); y += 4;
-                doc.text(`$${(i.precio * i.cantidad).toFixed(2)}`, 55, y, { align: "right" }); y += 5;
+        function actualizarTablaTicketsVentasDia() {
+            const tbody = document.querySelector('#tabla-ventas-dia-tickets tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            if (ventasDelDia.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #7f8c8d;">No hay ventas registradas hoy.</td></tr>`;
+                return;
+            }
+
+            ventasDelDia.forEach((venta) => {
+                const idx = ventasDelDia.indexOf(venta);
+                tbody.innerHTML += `
+                    <tr>
+                        <td><small>${venta.fechaHora}</small><br><strong>${venta.cliente}</strong></td>
+                        <td>$${venta.totalVenta.toFixed(2)}</td>
+                        <td><button type="button" class="btn-info" style="padding:4px 8px; width:auto; font-size: 0.8rem;" onclick="verTicketEspecifico(${idx})">👁️ Ver Ticket</button></td>
+                    </tr>
+                `;
             });
-            doc.text(`TOTAL: $${ultimaVentaRealizada.totalVenta.toFixed(2)}`, 3, y);
-            window.open(URL.createObjectURL(doc.output('blob')), '_blank');
+        }
+
+        function verTicketEspecifico(index) {
+            const venta = ventasDelDia[index];
+            if (venta) {
+                visualizarTicket(venta);
+            }
+        }
+
+        function generarHtmlContenidoTicket(venta) {
+            let itemsHtml = venta.items.map(i => `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                    <span>${i.cantidad}x ${i.nombre}</span>
+                    <span>$${(i.precio * i.cantidad).toFixed(2)}</span>
+                </div>
+            `).join('');
+
+            return `
+                <div style="text-align: center; margin-bottom: 8px;">
+                    <strong>NOTA DE VENTA</strong><br>
+                    <span style="font-size: 9px;">${venta.fechaHora}</span>
+                </div>
+                <div style="font-size: 10px; margin-bottom: 6px;">
+                    Cliente: ${venta.cliente}
+                </div>
+                <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 4px 0; margin-bottom: 6px;">
+                    ${itemsHtml}
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-bottom: 6px;">
+                    <span>TOTAL:</span>
+                    <span>$${venta.totalVenta.toFixed(2)}</span>
+                </div>
+                <div style="font-size: 10px; margin-bottom: 8px;">
+                    Pago: ${venta.metodoPago} <br>
+                    ${venta.metodoPago === 'Efectivo' ? `Recibido: $${venta.pagado.toFixed(2)}<br>Cambio: $${venta.cambio.toFixed(2)}` : ''}
+                </div>
+                <div style="text-align: center; font-size: 9px; margin-top: 10px;">
+                    ¡Gracias por su compra!
+                </div>
+            `;
+        }
+
+        function visualizarTicket(venta) {
+            document.getElementById('ticket-visual-body').innerHTML = generarHtmlContenidoTicket(venta);
+            document.getElementById('modal-ticket').style.display = 'flex';
+        }
+
+        function cerrarModalTicket() {
+            document.getElementById('modal-ticket').style.display = 'none';
+        }
+
+        function imprimirUltimoTicket() {
+            if (!ultimaVentaRealizada) return;
+            const contenedor = document.getElementById('print-ticket-container');
+            contenedor.innerHTML = generarHtmlContenidoTicket(ultimaVentaRealizada);
+            window.print();
         }
 
         function actualizarVistaBalance() {
@@ -854,12 +1242,13 @@
             tbody.innerHTML = '';
             ventasDelDia.forEach((v, index) => {
                 ingresos += v.totalVenta; costos += v.totalCosto;
-                tbody.innerHTML += `<tr><td><small>${v.fechaHora}</small><br><strong>${v.cliente}</strong></td><td>$${v.totalVenta.toFixed(2)}</td><td>${v.metodoPago}</td><td><button type="button" class="btn-danger" style="padding:2px 5px;" onclick="ventasDelDia.splice(${index},1);guardarEnDB('ventasDelDia',ventasDelDia);actualizarVistaCorte();subirALaNubeAutomatico();">X</button></td></tr>`;
+                tbody.innerHTML += `<tr><td><small>${v.fechaHora}</small><br><strong>${v.cliente}</strong></td><td>$${v.totalVenta.toFixed(2)}</td><td>${v.metodoPago}</td><td><button type="button" class="btn-danger" style="padding:2px 5px;" onclick="ventasDelDia.splice(${index},1);guardarEnDB('ventasDelDia',ventasDelDia);actualizarVistaCorte();actualizarTablaTicketsVentasDia();subirALaNubeAutomatico();">X</button></td></tr>`;
             });
             document.getElementById('cant-ventas').innerText = ventasDelDia.length;
             document.getElementById('total-ingresos').innerText = ingresos.toFixed(2);
             document.getElementById('total-costos').innerText = costos.toFixed(2);
             document.getElementById('total-ganancia').innerText = (ingresos - costos).toFixed(2);
+            actualizarTablaTicketsVentasDia();
         }
 
         function reiniciarDia() {
@@ -877,6 +1266,7 @@
                 ventasDelDia = [];
                 guardarEnDB('ventasDelDia', ventasDelDia);
                 actualizarVistaCorte();
+                actualizarTablaTicketsVentasDia();
                 subirALaNubeAutomatico();
                 alert('Caja cerrada correctamente.');
             }
@@ -907,3 +1297,9 @@
     </script>
 </body>
 </html>
+'''
+
+with open('punto_de_venta.html', 'w', encoding='utf-8') as f:
+    f.write(html_content)
+
+print("Archivo HTML generado con éxito.")

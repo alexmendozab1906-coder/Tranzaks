@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta 100% Automático y Ahorro de Datos</title>
+    <title>Punto de Venta Híbrido (Online/Offline)</title>
     <!-- Librería jsPDF para tickets -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -160,12 +160,12 @@
 
     <div class="main-container">
         <div class="topbar">
-            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Punto de Venta Multi-dispositivo</h1>
+            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Punto de Venta Híbrido</h1>
             <button class="menu-toggle" onclick="toggleSidebar()">☰ Menú</button>
         </div>
 
         <div class="content-area">
-            <div id="sync-status" class="sync-indicator">🟢 Sistema listo</div>
+            <div id="sync-status" class="sync-indicator">🟢 Modo Local Activo</div>
 
             <!-- SECCIÓN 1: VENTAS -->
             <div id="sec-ventas" class="tab-content active" style="display: block;">
@@ -347,7 +347,7 @@
                 <div class="card">
                     <h2>Configuración de Conexión Automática</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Configura esto una sola vez en cada dispositivo. A partir de ahí, la app sincronizará todo de fondo sin botones.
+                        Funciona sin internet. Si configuras esto, intentará sincronizar cuando detecte red.
                     </p>
 
                     <label>URL de Google Apps Script:</label>
@@ -384,7 +384,7 @@
         let ultimaVentaRealizada = null;
         let carrito = [];
         let nipSeguridad = "";
-        let ultimaHuellaNube = ""; // Huella para ahorro de datos móviles
+        let ultimaHuellaNube = "";
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -398,7 +398,8 @@
         const request = indexedDB.open('PuntoVentaSheetAutoDB', 2);
         request.onsuccess = function(event) {
             db = event.target.result;
-            cargarDatosLocalesYDescargarDeNube();
+            // PRIMERO CARGAR LOCALMENTE PARA QUE ABRA SIN INTERNET DE FORMA INMEDIATA
+            cargarDatosLocalesYrenderizar();
         };
         request.onupgradeneeded = function(event) {
             db = event.target.result;
@@ -413,7 +414,8 @@
             req.onsuccess = () => { if (callback) callback(); };
         }
 
-        function cargarDatosLocalesYDescargarDeNube() {
+        // CARGA 100% LOCAL (Funciona sin internet al instante)
+        function cargarDatosLocalesYrenderizar() {
             const transaction = db.transaction(['almacen'], 'readonly');
             const store = transaction.objectStore('almacen');
 
@@ -427,7 +429,8 @@
             store.get('nubeToken').onsuccess = (e) => { 
                 if(e.target.result) {
                     document.getElementById('nube-token').value = e.target.result;
-                    descargarDeLaNubeAutomatico();
+                    // DESPUÉS DE CARGAR LOCAL, INTENTA ACTUALIZAR DE LA NUBE EN SEGUNDO PLANO (SI HAY RED)
+                    descargarDeLaNubeAutomatico(false);
                 }
             };
             store.get('nipSeguridad').onsuccess = (e) => { nipSeguridad = e.target.result || ""; actualizarInterfazNIP(); };
@@ -466,7 +469,7 @@
             if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
             
             if (idSeccion === 'sec-balance' || idSeccion === 'sec-corte' || idSeccion === 'sec-ventas') {
-                descargarDeLaNubeAutomatico();
+                descargarDeLaNubeAutomatico(false);
             }
 
             if (idSeccion === 'sec-balance') actualizarVistaBalance();
@@ -484,7 +487,7 @@
             descargarDeLaNubeAutomatico(true);
         }
 
-        // MOTOR DE SINCRONIZACIÓN AUTOMÁTICA DE FONDO
+        // SUBIDA A LA NUBE (Falla de forma silenciosa si no hay internet sin afectar la venta local)
         function subirALaNubeAutomatico() {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
@@ -500,9 +503,7 @@
                 "historialMensual": convertirArrayAMatrizHistorial(historialMensual)
             };
 
-            // Actualizar huella local al subir para reflejar el estado actual
             ultimaHuellaNube = JSON.stringify(payloadDatos);
-
             const body = { token, accion: 'subir', datos: payloadDatos };
 
             fetch(url, { method: 'POST', body: JSON.stringify(body) })
@@ -517,19 +518,17 @@
                 }
             })
             .catch(() => {
-                document.getElementById('sync-status').innerText = "⚠️ Sin conexión a internet";
-                document.getElementById('sync-status').style.color = "#e74c3c";
+                // SI NO HAY INTERNET, SE QUEDA EN MODO LOCAL SIN AFECTAR AL USUARIO
+                document.getElementById('sync-status').innerText = "📴 Sin internet (Modo Local guardado)";
+                document.getElementById('sync-status').style.color = "#d97706";
             });
         }
 
-        // DESCARGA INTELIGENTE (AHORRO DE DATOS MÓVILES SI NO HAY CAMBIOS)
+        // DESCARGA INTELIGENTE (Detecta si hay internet; si no hay, opera silenciosamente sin congelar nada)
         function descargarDeLaNubeAutomatico(mostrarAlertaExito = false) {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
             if (!url || !token) return;
-
-            document.getElementById('sync-status').innerText = "🔍 Verificando cambios...";
-            document.getElementById('sync-status').style.color = "#2980b9";
 
             const body = { token, accion: 'descargar' };
 
@@ -537,8 +536,6 @@
             .then(res => res.json())
             .then(res => {
                 if (res.status === "error") {
-                    document.getElementById('sync-status').innerText = "🔴 Token incorrecto";
-                    document.getElementById('sync-status').style.color = "#e74c3c";
                     if (mostrarAlertaExito) alert('Error: ' + res.message);
                     return;
                 }
@@ -546,16 +543,12 @@
                 const d = res.datos;
                 if (d) {
                     const huellaEntrante = JSON.stringify(d);
-
-                    // AHORRO DE DATOS MÓVILES: Si la información en la nube es idéntica a la última conocida, 
-                    // se detiene la ejecución para no gastar recursos ni procesar de más.
                     if (huellaEntrante === ultimaHuellaNube && !mostrarAlertaExito) {
                         document.getElementById('sync-status').innerText = "🟢 Sin cambios (Ahorro de datos)";
                         document.getElementById('sync-status').style.color = "#27ae60";
                         return;
                     }
 
-                    // Actualizar huella interna
                     ultimaHuellaNube = huellaEntrante;
 
                     if (d.productos) productos = convertirMatrizAObjetoProductos(d.productos);
@@ -581,8 +574,9 @@
                 }
             })
             .catch(() => {
-                document.getElementById('sync-status').innerText = "⚠️ Sin conexión a internet";
-                document.getElementById('sync-status').style.color = "#e74c3c";
+                // SI NO HAY INTERNET AL INTENTAR DESCARGAR, LA APP IGNORA EL ERROR Y SIGUE FUNCIONANDO CON LO LOCAL
+                document.getElementById('sync-status').innerText = "📴 Sin internet (Usando datos locales)";
+                document.getElementById('sync-status').style.color = "#d97706";
             });
         }
 
@@ -636,7 +630,7 @@
             return arr;
         }
 
-        // ACCIONES DE CLIENTES, PRODUCTOS Y VENTAS (AUTOMATIZADAS)
+        // ACCIONES DE CLIENTES, PRODUCTOS Y VENTAS (AUTOMATIZADAS Y FUNCIONALES OFFLINE)
         document.getElementById('form-cliente').addEventListener('submit', (e) => {
             e.preventDefault();
             const nombre = document.getElementById('cli-nombre').value.trim();
@@ -809,7 +803,7 @@
             actualizarCarrito();
             
             subirALaNubeAutomatico();
-            alert('✅ Venta procesada y sincronizada de forma automática.');
+            alert('✅ Venta procesada exitosamente en el dispositivo.');
         }
 
         function visualizarUltimoTicketPDF() {
@@ -884,7 +878,7 @@
                 guardarEnDB('ventasDelDia', ventasDelDia);
                 actualizarVistaCorte();
                 subirALaNubeAutomatico();
-                alert('Caja cerrada y sincronizada automáticamente.');
+                alert('Caja cerrada correctamente.');
             }
         }
 

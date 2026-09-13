@@ -1,9 +1,9 @@
-html_content = '''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta Híbrido (Online/Offline Inteligente)</title>
+    <title>Punto de Venta Híbrido (Online/Offline)</title>
     <!-- Librería jsPDF por si se requiere respaldo -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -413,7 +413,7 @@ html_content = '''<!DOCTYPE html>
                 <div class="paw-pads"></div>
             </div>
         </div>
-        <div class="splash-text">¡Hola! Cargando tus datos locales...</div>
+        <div class="splash-text">¡Hola! Preparando tu sistema...</div>
     </div>
 
     <!-- MODAL PARA VISUALIZAR TICKET -->
@@ -647,7 +647,7 @@ html_content = '''<!DOCTYPE html>
                     <label>Clave o Token Secreto:</label>
                     <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123">
 
-                    <button type="button" class="btn-info" onclick="guardarCredencialesNube()" style="margin-top: 10px;">Guardar Configuración y Probar Conexión</button>
+                    <button type="button" class="btn-info" onclick="guardarCredencialesNube()" style="margin-top: 10px;">Guardar Configuración y Probar</button>
                 </div>
             </div>
 
@@ -670,6 +670,14 @@ html_content = '''<!DOCTYPE html>
     <div id="print-ticket-container"></div>
 
     <script>
+        // QUITAR PANTALLA DE CARGA DEL OSO A LOS 2 SEGUNDOS EXACTOS
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                splash.classList.add('fade-out');
+            }, 2000);
+        });
+
         let db;
         let productos = {};
         let clientes = {};
@@ -679,7 +687,6 @@ html_content = '''<!DOCTYPE html>
         let ultimaVentaRealizada = null;
         let nipSeguridad = "";
         let ultimaHuellaNube = "";
-        let verificacionNubeIntentada = false;
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -693,18 +700,7 @@ html_content = '''<!DOCTYPE html>
         const request = indexedDB.open('PuntoVentaSheetAutoDB', 2);
         request.onsuccess = function(event) {
             db = event.target.result;
-            // 1. CARGA INMEDIATA Y 100% OFFLINE CON LO ÚLTIMO GUARDADO LOCALMENTE
-            cargarDatosLocalesYrenderizar(() => {
-                // Quitar la pantalla de carga del oso inmediatamente después de renderizar localmente
-                setTimeout(() => {
-                    const splash = document.getElementById('splash-screen');
-                    splash.classList.add('fade-out');
-                }, 400);
-
-                // 2. UNA VEZ INICIADO, INTENTAR CONECTAR A LA NUBE UNA SOLA VEZ
-                // (Evita gasto continuo de datos móviles y bloqueos si no hay internet)
-                intentarSincronizacionInicialEnSegundoPlano();
-            });
+            cargarDatosLocalesYrenderizar();
         };
         request.onupgradeneeded = function(event) {
             db = event.target.result;
@@ -719,82 +715,24 @@ html_content = '''<!DOCTYPE html>
             req.onsuccess = () => { if (callback) callback(); };
         }
 
-        function cargarDatosLocalesYrenderizar(callbackFin) {
+        function cargarDatosLocalesYrenderizar() {
             const transaction = db.transaction(['almacen'], 'readonly');
             const store = transaction.objectStore('almacen');
 
-            let completados = 0;
-            const verificarFin = () => {
-                completados++;
-                if (completados >= 6 && callbackFin) callbackFin();
-            };
-
-            store.get('productos').onsuccess = (e) => { productos = e.target.result || {}; actualizarTablaProductos(); actualizarListaSugerencias(); verificarFin(); };
-            store.get('clientes').onsuccess = (e) => { clientes = e.target.result || {}; actualizarTablaClientes(); actualizarSelectClientes(); verificarFin(); };
-            store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); actualizarTablaTicketsVentasDia(); verificarFin(); };
-            store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; verificarFin(); };
+            store.get('productos').onsuccess = (e) => { productos = e.target.result || {}; actualizarTablaProductos(); actualizarListaSugerencias(); };
+            store.get('clientes').onsuccess = (e) => { clientes = e.target.result || {}; actualizarTablaClientes(); actualizarSelectClientes(); };
+            store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); actualizarTablaTicketsVentasDia(); };
+            store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; };
             store.get('nubeUrl').onsuccess = (e) => { 
                 if(e.target.result) document.getElementById('nube-database-url').value = e.target.result;
-                verificarFin();
             };
             store.get('nubeToken').onsuccess = (e) => { 
-                if(e.target.result) document.getElementById('nube-token').value = e.target.result;
-                verificarFin();
+                if(e.target.result) {
+                    document.getElementById('nube-token').value = e.target.result;
+                    descargarDeLaNubeAutomatico(false);
+                }
             };
             store.get('nipSeguridad').onsuccess = (e) => { nipSeguridad = e.target.result || ""; actualizarInterfazNIP(); };
-        }
-
-        function intentarSincronizacionInicialEnSegundoPlano() {
-            if (verificacionNubeIntentada) return;
-            verificacionNubeIntentada = true;
-
-            const url = document.getElementById('nube-database-url').value.trim();
-            const token = document.getElementById('nube-token').value.trim();
-            if (!url || !token) return; // Si no hay credenciales configuradas, se queda en modo local sin intentar
-
-            document.getElementById('sync-status').innerText = "☁️ Comprobando conexión con la nube...";
-            document.getElementById('sync-status').style.color = "#d97706";
-
-            const body = { token, accion: 'descargar' };
-
-            fetch(url, { method: 'POST', body: JSON.stringify(body) })
-            .then(res => res.json())
-            .then(res => {
-                if (res.status === "success" && res.datos) {
-                    const d = res.datos;
-                    const huellaEntrante = JSON.stringify(d);
-                    ultimaHuellaNube = huellaEntrante;
-
-                    if (d.productos) productos = convertirMatrizAObjetoProductos(d.productos);
-                    if (d.clientes) clientes = convertirMatrizAObjetoClientes(d.clientes);
-                    if (d.ventasDelDia) ventasDelDia = convertirMatrizAArrayVentas(d.ventasDelDia);
-                    if (d.historialMensual) historialMensual = convertirMatrizAArrayHistorial(d.historialMensual);
-
-                    guardarEnDB('productos', productos);
-                    guardarEnDB('clientes', clientes);
-                    guardarEnDB('ventasDelDia', ventasDelDia);
-                    guardarEnDB('historialMensual', historialMensual);
-
-                    actualizarTablaProductos();
-                    actualizarListaSugerencias();
-                    actualizarTablaClientes();
-                    actualizarSelectClientes();
-                    actualizarVistaCorte();
-                    actualizarVistaBalance();
-                    actualizarTablaTicketsVentasDia();
-
-                    document.getElementById('sync-status').innerText = "🟢 Sincronizado con la nube";
-                    document.getElementById('sync-status').style.color = "#27ae60";
-                } else {
-                    document.getElementById('sync-status').innerText = "🟢 Modo Local (Sin cambios en nube)";
-                    document.getElementById('sync-status').style.color = "#27ae60";
-                }
-            })
-            .catch(() => {
-                // Si falla (sin internet), se mantiene intacto con lo último recibido localmente sin reintentar molestamente
-                document.getElementById('sync-status').innerText = "📴 Sin internet (Modo Local activo)";
-                document.getElementById('sync-status').style.color = "#27ae60";
-            });
         }
 
         function actualizarInterfazNIP() {
@@ -833,6 +771,10 @@ html_content = '''<!DOCTYPE html>
             boton.classList.add('active');
 
             if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+            
+            if (idSeccion === 'sec-balance' || idSeccion === 'sec-corte' || idSeccion === 'sec-ventas') {
+                descargarDeLaNubeAutomatico(false);
+            }
 
             if (idSeccion === 'sec-balance') actualizarVistaBalance();
             else if (idSeccion === 'sec-corte') actualizarVistaCorte();
@@ -846,9 +788,7 @@ html_content = '''<!DOCTYPE html>
             
             guardarEnDB('nubeUrl', url);
             guardarEnDB('nubeToken', token);
-            verificacionNubeIntentada = false;
-            intentarSincronizacionInicialEnSegundoPlano();
-            alert('¡Configuración guardada! Comprobando conexión...');
+            descargarDeLaNubeAutomatico(true);
         }
 
         function subirALaNubeAutomatico() {
@@ -882,7 +822,62 @@ html_content = '''<!DOCTYPE html>
             })
             .catch(() => {
                 document.getElementById('sync-status').innerText = "📴 Sin internet (Modo Local guardado)";
-                document.getElementById('sync-status').style.color = "#27ae60";
+                document.getElementById('sync-status').style.color = "#d97706";
+            });
+        }
+
+        function descargarDeLaNubeAutomatico(mostrarAlertaExito = false) {
+            const url = document.getElementById('nube-database-url').value.trim();
+            const token = document.getElementById('nube-token').value.trim();
+            if (!url || !token) return;
+
+            const body = { token, accion: 'descargar' };
+
+            fetch(url, { method: 'POST', body: JSON.stringify(body) })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === "error") {
+                    if (mostrarAlertaExito) alert('Error: ' + res.message);
+                    return;
+                }
+
+                const d = res.datos;
+                if (d) {
+                    const huellaEntrante = JSON.stringify(d);
+                    if (huellaEntrante === ultimaHuellaNube && !mostrarAlertaExito) {
+                        document.getElementById('sync-status').innerText = "🟢 Sin cambios (Ahorro de datos)";
+                        document.getElementById('sync-status').style.color = "#27ae60";
+                        return;
+                    }
+
+                    ultimaHuellaNube = huellaEntrante;
+
+                    if (d.productos) productos = convertirMatrizAObjetoProductos(d.productos);
+                    if (d.clientes) clientes = convertirMatrizAObjetoClientes(d.clientes);
+                    if (d.ventasDelDia) ventasDelDia = convertirMatrizAArrayVentas(d.ventasDelDia);
+                    if (d.historialMensual) historialMensual = convertirMatrizAArrayHistorial(d.historialMensual);
+
+                    guardarEnDB('productos', productos);
+                    guardarEnDB('clientes', clientes);
+                    guardarEnDB('ventasDelDia', ventasDelDia);
+                    guardarEnDB('historialMensual', historialMensual);
+
+                    actualizarTablaProductos();
+                    actualizarListaSugerencias();
+                    actualizarTablaClientes();
+                    actualizarSelectClientes();
+                    actualizarVistaCorte();
+                    actualizarVistaBalance();
+                    actualizarTablaTicketsVentasDia();
+
+                    document.getElementById('sync-status').innerText = "🟢 Sincronizado con la nube";
+                    document.getElementById('sync-status').style.color = "#27ae60";
+                    if (mostrarAlertaExito) alert('¡Conexión establecida y datos sincronizados correctamente!');
+                }
+            })
+            .catch(() => {
+                document.getElementById('sync-status').innerText = "📴 Sin internet (Usando datos locales)";
+                document.getElementById('sync-status').style.color = "#d97706";
             });
         }
 
@@ -1013,6 +1008,7 @@ html_content = '''<!DOCTYPE html>
             }
         }
 
+        // FUNCIÓN EDITAR IMAGEN DESDE LA TABLA DE INVENTARIO ACTUAL
         function cambiarImagenInventario(codigo) {
             const inputTemp = document.createElement('input');
             inputTemp.type = 'file';
@@ -1132,6 +1128,7 @@ html_content = '''<!DOCTYPE html>
             actualizarTablaTicketsVentasDia();
             subirALaNubeAutomatico();
 
+            // MOSTRAR AUTOMÁTICAMENTE EL TICKET EN EL MODAL DE VISUALIZACIÓN
             visualizarTicket(venta);
         }
 
@@ -1146,6 +1143,7 @@ html_content = '''<!DOCTYPE html>
             }
 
             ventasDelDia.forEach((venta) => {
+                // Buscamos el índice actual en el array para pasarle la venta o el índice a la función
                 const idx = ventasDelDia.indexOf(venta);
                 tbody.innerHTML += `
                     <tr>
@@ -1297,9 +1295,3 @@ html_content = '''<!DOCTYPE html>
     </script>
 </body>
 </html>
-'''
-
-with open('punto_de_venta.html', 'w', encoding='utf-8') as f:
-    f.write(html_content)
-
-print("Archivo HTML generado con éxito.")

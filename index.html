@@ -92,7 +92,7 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            max-width: 800px;
+            max-width: 850px;
             margin: 0 auto;
         }
         h2 { font-size: 1.2rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; margin-top: 0; }
@@ -123,8 +123,8 @@
         .btn-secondary:hover { background-color: #6c757d; }
         .btn-cloud { background-color: #0284c7; }
         .btn-cloud:hover { background-color: #0369a1; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
-        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: middle; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { border: 1px solid #e2e8f0; padding: 6px; text-align: left; vertical-align: middle; }
         th { background-color: #f8fafc; color: #475569; }
         .monto-total { font-size: 1.5rem; color: #2c3e50; font-weight: bold; text-align: right; margin: 10px 0; }
         .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
@@ -133,7 +133,8 @@
         .img-preview-form { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; display: block; margin-top: 4px; }
         .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
         .input-stock-table { width: 70px; padding: 4px; text-align: center; margin: 0; }
-        .input-carrito-cant { width: 60px; padding: 4px; text-align: center; margin: 0; }
+        .input-carrito-cant { width: 50px; padding: 4px; text-align: center; margin: 0; }
+        .input-carrito-desc { width: 65px; padding: 4px; text-align: center; margin: 0; }
 
         /* Estilos del indicador flotante de sincronización */
         #status-message {
@@ -228,24 +229,21 @@
                         <button type="submit" class="btn-info">Agregar Producto</button>
                     </form>
 
-                    <div style="max-height: 200px; overflow-y: auto; margin-top:10px;">
+                    <div style="max-height: 220px; overflow-y: auto; margin-top:10px;">
                         <table id="tabla-carrito">
                             <thead>
-                                <tr><th>Producto</th><th>Cant.</th><th>Subtotal</th><th>Acción</th></tr>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cant.</th>
+                                    <th>Precio U.</th>
+                                    <th>Desc./U</th>
+                                    <th>Tipo</th>
+                                    <th>Subtotal</th>
+                                    <th>Acción</th>
+                                </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
-                    </div>
-
-                    <div style="margin-top: 10px;">
-                        <label>Descuento Aplicado:</label>
-                        <div style="display: flex; gap: 8px;">
-                            <select id="tipo-descuento" onchange="actualizarTablaCarrito()">
-                                <option value="monto">Monto ($)</option>
-                                <option value="porcentaje">Porcentaje (%)</option>
-                            </select>
-                            <input type="number" step="0.01" id="valor-descuento" value="" placeholder="Valor descuento" oninput="actualizarTablaCarrito()">
-                        </div>
                     </div>
 
                     <div class="monto-total">Total: $<span id="total-venta">0.00</span></div>
@@ -304,16 +302,16 @@
 
                     <div style="display: flex; gap: 10px; margin-top: 15px;">
                         <div class="corte-resumen" style="flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0;">
-                            <h4 style="margin: 0 0 8px 0; color: #166534; font-size: 0.95rem;">🟢 Ganancia con Descuento</h4>
+                            <h4 style="margin: 0 0 8px 0; color: #166534; font-size: 0.95rem;">🟢 Ganancia Real (Con Descuentos)</h4>
                             <p style="font-size: 0.9rem; margin: 4px 0;">Ingresos: $<span id="bal-ing-desc">0.00</span></p>
                             <p style="font-size: 0.9rem; margin: 4px 0;">Costos: $<span id="bal-cos-desc">0.00</span></p>
                             <p style="font-size: 1rem; color: #166534; margin: 6px 0 0 0;"><strong>Ganancia: $<span id="bal-gan-desc">0.00</span></strong></p>
                         </div>
                         <div class="corte-resumen" style="flex: 1; background: #f8fafc; border: 1px solid #cbd5e1;">
-                            <h4 style="margin: 0 0 8px 0; color: #334155; font-size: 0.95rem;">⚪ Ganancia sin Descuento</h4>
-                            <p style="font-size: 0.9rem; margin: 4px 0;">Ingresos: $<span id="bal-ing-normal">0.00</span></p>
+                            <h4 style="margin: 0 0 8px 0; color: #334155; font-size: 0.95rem;">⚪ Valor Sin Descuentos</h4>
+                            <p style="font-size: 0.9rem; margin: 4px 0;">Ingresos Brutos: $<span id="bal-ing-normal">0.00</span></p>
                             <p style="font-size: 0.9rem; margin: 4px 0;">Costos: $<span id="bal-cos-normal">0.00</span></p>
-                            <p style="font-size: 1rem; color: #334155; margin: 6px 0 0 0;"><strong>Ganancia: $<span id="bal-gan-normal">0.00</span></strong></p>
+                            <p style="font-size: 1rem; color: #334155; margin: 6px 0 0 0;"><strong>Margen Ideal: $<span id="bal-gan-normal">0.00</span></strong></p>
                         </div>
                     </div>
 
@@ -465,7 +463,6 @@
         let carrito = [];
         let nipSeguridad = "";
 
-        // Funciones del indicador visual flotante
         const statusMessage = document.getElementById('status-message');
 
         function mostrarEstado(mensaje = "Sincronizando datos...", conSpinner = true) {
@@ -520,7 +517,6 @@
             store.get('nubeUrl').onsuccess = (e) => { 
                 if(e.target.result) {
                     document.getElementById('nube-database-url').value = e.target.result;
-                    // Auto-sincronizar al iniciar la aplicación de forma inmediata
                     setTimeout(() => descargarDeLaNube(true), 300);
                 }
             };
@@ -590,9 +586,6 @@
                 if(response.status === "success") {
                     mostrarEstado("¡Datos subidos con éxito! ✓", false);
                     ocultarEstado(2000);
-                    if (!silencioso && !document.getElementById('status-message').classList.contains('status-visible')) {
-                        // Opcional si se requiere alerta extra
-                    }
                 } else {
                     mostrarEstado("Error: " + (response.message || 'Token incorrecto'), false);
                     ocultarEstado(3000);
@@ -657,536 +650,659 @@
         }
 
         // CLIENTES
-        document.getElementById('form-cliente').addEventListener('submit', (e) => {
+        document.getElementById('form-cliente').addEventListener('submit', function(e) {
             e.preventDefault();
             const nombre = document.getElementById('cli-nombre').value.trim();
             const telefono = document.getElementById('cli-telefono').value.trim();
-            if (!nombre || !telefono) return;
-            clientes[nombre] = { telefono };
-            guardarEnDB('clientes', clientes);
-            actualizarTablaClientes();
-            actualizarSelectClientes();
-            e.target.reset();
-            subirALaNube(true);
-        });
+            if (!nombre) return;
 
-        function eliminarCliente(nombre) {
-            if (confirm(`¿Eliminar al cliente "${nombre}"?`)) {
-                delete clientes[nombre];
-                guardarEnDB('clientes', clientes);
+            clientes[nombre] = { telefono };
+            guardarEnDB('clientes', clientes, () => {
                 actualizarTablaClientes();
                 actualizarSelectClientes();
+                document.getElementById('form-cliente').reset();
                 subirALaNube(true);
-            }
-        }
+            });
+        });
 
         function actualizarTablaClientes() {
             const tbody = document.querySelector('#tabla-clientes tbody');
             tbody.innerHTML = '';
             for (let nombre in clientes) {
-                tbody.innerHTML += `<tr><td>${nombre}</td><td>${clientes[nombre].telefono}</td><td><button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarCliente('${nombre}')">🗑️</button></td></tr>`;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${nombre}</td>
+                        <td>${clientes[nombre].telefono}</td>
+                        <td><button type="button" class="btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="eliminarCliente('${nombre}')">Eliminar</button></td>
+                    </tr>
+                `;
             }
+        }
+
+        function eliminarCliente(nombre) {
+            if (!confirm(`¿Eliminar al cliente ${nombre}?`)) return;
+            delete clientes[nombre];
+            guardarEnDB('clientes', clientes, () => {
+                actualizarTablaClientes();
+                actualizarSelectClientes();
+                subirALaNube(true);
+            });
         }
 
         function actualizarSelectClientes() {
             const select = document.getElementById('venta-cliente');
-            select.innerHTML = '<option value="Público General">Público General</option>';
-            for (let nombre in clientes) select.innerHTML += `<option value="${nombre}">${nombre}</option>`;
+            let html = '<option value="Público General">Público General</option>';
+            for (let nombre in clientes) {
+                html += `<option value="${nombre}">${nombre}</option>`;
+            }
+            select.innerHTML = html;
         }
 
         // PRODUCTOS
         function cargarDatosProductoEnFormulario() {
             const codigo = document.getElementById('prod-codigo').value.trim();
-            const contenedorPreview = document.getElementById('contenedor-preview-imagen');
-            contenedorPreview.innerHTML = '';
-
-            if (productos[codigo]) {
-                const p = productos[codigo];
-                document.getElementById('prod-nombre').value = p.nombre;
-                document.getElementById('prod-costo').value = p.costo;
-                document.getElementById('prod-precio').value = p.precio;
-                document.getElementById('prod-stock').value = p.stock;
-
-                if (p.imagen) {
-                    contenedorPreview.innerHTML = `<span style="font-size: 0.8rem; color: #555;">Imagen actual:</span><img src="${p.imagen}" class="img-preview-form">`;
+            const prod = productos[codigo];
+            const divPreview = document.getElementById('contenedor-preview-imagen');
+            
+            if (prod) {
+                document.getElementById('prod-nombre').value = prod.nombre;
+                document.getElementById('prod-costo').value = prod.costo;
+                document.getElementById('prod-precio').value = prod.precio;
+                document.getElementById('prod-stock').value = prod.stock;
+                if (prod.imagen) {
+                    divPreview.innerHTML = `<img src="${prod.imagen}" class="img-preview-form">`;
+                } else {
+                    divPreview.innerHTML = '';
                 }
             } else {
                 document.getElementById('prod-nombre').value = '';
                 document.getElementById('prod-costo').value = '';
                 document.getElementById('prod-precio').value = '';
                 document.getElementById('prod-stock').value = '';
+                divPreview.innerHTML = '';
             }
         }
 
-        document.getElementById('form-producto').addEventListener('submit', (e) => {
+        document.getElementById('form-producto').addEventListener('submit', function(e) {
             e.preventDefault();
             const codigo = document.getElementById('prod-codigo').value.trim();
             const nombre = document.getElementById('prod-nombre').value.trim();
-            const costo = parseFloat(document.getElementById('prod-costo').value);
-            const precio = parseFloat(document.getElementById('prod-precio').value);
-            const stock = parseInt(document.getElementById('prod-stock').value);
-            const inputImagen = document.getElementById('prod-imagen');
-            let imagenBase64 = productos[codigo] ? productos[codigo].imagen : '';
+            const costo = parseFloat(document.getElementById('prod-costo').value) || 0;
+            const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
+            const stock = parseInt(document.getElementById('prod-stock').value) || 0;
+            const archivoInput = document.getElementById('prod-imagen');
 
-            if (inputImagen.files && inputImagen.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    productos[codigo] = { nombre, costo, precio, stock, imagen: ev.target.result };
-                    finalizarGuardadoProducto(e.target);
+            if (!codigo || !nombre) return;
+
+            function guardarDatosFinales(imagenBase64) {
+                productos[codigo] = {
+                    nombre,
+                    costo,
+                    precio,
+                    stock,
+                    imagen: imagenBase64 || (productos[codigo] ? productos[codigo].imagen : '')
                 };
-                reader.readAsDataURL(inputImagen.files[0]);
+
+                guardarEnDB('productos', productos, () => {
+                    actualizarTablaProductos();
+                    actualizarListaSugerencias();
+                    document.getElementById('form-producto').reset();
+                    document.getElementById('contenedor-preview-imagen').innerHTML = '';
+                    subirALaNube(true);
+                });
+            }
+
+            if (archivoInput.files && archivoInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(uploadEvent) {
+                    guardarDatosFinales(uploadEvent.target.result);
+                };
+                reader.readAsDataURL(archivoInput.files[0]);
             } else {
-                productos[codigo] = { nombre, costo, precio, stock, imagen: imagenBase64 };
-                finalizarGuardadoProducto(e.target);
+                guardarDatosFinales(null);
             }
         });
-
-        function finalizarGuardadoProducto(form) {
-            guardarEnDB('productos', productos);
-            actualizarTablaProductos();
-            actualizarListaSugerencias();
-            form.reset();
-            document.getElementById('contenedor-preview-imagen').innerHTML = '';
-            subirALaNube(true);
-        }
-
-        function eliminarProducto(codigo) {
-            if (confirm('¿Eliminar producto?')) {
-                delete productos[codigo];
-                guardarEnDB('productos', productos);
-                actualizarTablaProductos();
-                actualizarListaSugerencias();
-                subirALaNube(true);
-            }
-        }
-
-        function actualizarStockDirecto(codigo, inputEl) {
-            const p = productos[codigo];
-            if (!p) return;
-            const nuevoStock = parseInt(inputEl.value);
-            if (isNaN(nuevoStock) || nuevoStock < 0) {
-                alert('Cantidad de stock inválida.');
-                inputEl.value = p.stock;
-                return;
-            }
-            
-            p.stock = nuevoStock;
-            guardarEnDB('productos', productos);
-            actualizarTablaProductos();
-            subirALaNube(true);
-        }
 
         function actualizarTablaProductos() {
             const tbody = document.querySelector('#tabla-productos tbody');
             tbody.innerHTML = '';
             let inversionTotal = 0;
-            for (let cod in productos) {
-                const p = productos[cod];
+
+            for (let codigo in productos) {
+                const p = productos[codigo];
                 inversionTotal += (p.costo * p.stock);
-                const img = p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img';
-                tbody.innerHTML += `<tr>
-                    <td>${img}</td>
-                    <td>${cod}</td>
-                    <td>${p.nombre}</td>
-                    <td>$${p.costo.toFixed(2)}</td>
-                    <td>$${p.precio.toFixed(2)}</td>
-                    <td><input type="number" class="input-stock-table" value="${p.stock}" min="0" onchange="actualizarStockDirecto('${cod}', this)"></td>
-                    <td>
-                        <button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarProducto('${cod}')" title="Eliminar Producto">🗑️</button>
-                    </td>
-                </tr>`;
+                const imgTag = p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${imgTag}</td>
+                        <td>${codigo}</td>
+                        <td>${p.nombre}</td>
+                        <td>$${p.costo.toFixed(2)}</td>
+                        <td>$${p.precio.toFixed(2)}</td>
+                        <td><input type="number" class="input-stock-table" value="${p.stock}" onchange="cambiarStockDirecto('${codigo}', this.value)"></td>
+                        <td><button type="button" class="btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="eliminarProducto('${codigo}')">X</button></td>
+                    </tr>
+                `;
             }
             document.getElementById('inversion-total-inventario').innerText = inversionTotal.toFixed(2);
         }
 
+        function cambiarStockDirecto(codigo, nuevoStock) {
+            if (productos[codigo]) {
+                productos[codigo].stock = parseInt(nuevoStock) || 0;
+                guardarEnDB('productos', productos, () => {
+                    actualizarTablaProductos();
+                    subirALaNube(true);
+                });
+            }
+        }
+
+        function eliminarProducto(codigo) {
+            if (!confirm(`¿Desea eliminar el producto con código ${codigo}?`)) return;
+            delete productos[codigo];
+            guardarEnDB('productos', productos, () => {
+                actualizarTablaProductos();
+                actualizarListaSugerencias();
+                subirALaNube(true);
+            });
+        }
+
         function actualizarListaSugerencias() {
             const datalist = document.getElementById('lista-sugerencias-productos');
-            datalist.innerHTML = '';
-            for (let cod in productos) datalist.innerHTML += `<option value="${productos[cod].nombre}">`;
+            let html = '';
+            for (let codigo in productos) {
+                const p = productos[codigo];
+                html += `<option value="${codigo}">[${codigo}] ${p.nombre} - Stock: ${p.stock}</option>`;
+            }
+            datalist.innerHTML = html;
         }
 
-        // VENTAS Y CARRITO
-        document.getElementById('form-venta').addEventListener('submit', (e) => {
+        // CARRITO Y VENTAS
+        document.getElementById('form-venta').addEventListener('submit', function(e) {
             e.preventDefault();
-            const termino = document.getElementById('venta-busqueda').value.trim().toLowerCase();
+            const busquedaInput = document.getElementById('venta-busqueda');
+            const valorBusqueda = busquedaInput.value.trim();
+            if (!valorBusqueda) return;
+
             let codigoEncontrado = null;
-            if (productos[termino]) codigoEncontrado = termino;
-            else {
-                for (let cod in productos) {
-                    if (productos[cod].nombre.toLowerCase() === termino) codigoEncontrado = cod;
+            if (productos[valorBusqueda]) {
+                codigoEncontrado = valorBusqueda;
+            } else {
+                for (let codigo in productos) {
+                    if (productos[codigo].nombre.toLowerCase() === valorBusqueda.toLowerCase()) {
+                        codigoEncontrado = codigo;
+                        break;
+                    }
                 }
             }
-            if (!codigoEncontrado) return alert('Producto no encontrado.');
-            const p = productos[codigoEncontrado];
-            if (p.stock <= 0) return alert('Sin stock disponible');
 
-            const enCarrito = carrito.find(i => i.codigo === codigoEncontrado);
-            if (enCarrito) {
-                if (enCarrito.cantidad + 1 > p.stock) return alert('Stock insuficiente');
-                enCarrito.cantidad++;
-            } else {
-                carrito.push({ codigo: codigoEncontrado, nombre: p.nombre, precioOriginal: p.precio, precio: p.precio, costo: p.costo, cantidad: 1 });
+            if (!codigoEncontrado) {
+                alert('Producto no encontrado en el inventario.');
+                return;
             }
-            document.getElementById('venta-busqueda').value = '';
+
+            const p = productos[codigoEncontrado];
+            if (p.stock <= 0) {
+                alert('¡No hay stock disponible para este producto!');
+                return;
+            }
+
+            const itemExistente = carrito.find(item => item.codigo === codigoEncontrado);
+            if (itemExistente) {
+                if (itemExistente.cantidad + 1 > p.stock) {
+                    alert('No puedes agregar más de la cantidad disponible en stock.');
+                    return;
+                }
+                itemExistente.cantidad += 1;
+            } else {
+                carrito.push({
+                    codigo: codigoEncontrado,
+                    nombre: p.nombre,
+                    precio: p.precio,
+                    costo: p.costo,
+                    cantidad: 1,
+                    descuentoUnitario: 0,
+                    tipoDescuentoUnitario: 'monto' // 'monto' ($) o 'porcentaje' (%)
+                });
+            }
+
+            busquedaInput.value = '';
             actualizarTablaCarrito();
         });
-
-        function cambiarCantidadCarrito(index, inputEl) {
-            const nuevoVal = parseInt(inputEl.value);
-            const item = carrito[index];
-            const p = productos[item.codigo];
-
-            if (isNaN(nuevoVal) || nuevoVal <= 0) {
-                alert('Ingresa una cantidad válida mayor a 0.');
-                inputEl.value = item.cantidad;
-                return;
-            }
-
-            if (p && nuevoVal > p.stock) {
-                alert(`Stock insuficiente. Stock disponible: ${p.stock}`);
-                inputEl.value = item.cantidad;
-                return;
-            }
-
-            item.cantidad = nuevoVal;
-            actualizarTablaCarrito();
-        }
 
         function actualizarTablaCarrito() {
             const tbody = document.querySelector('#tabla-carrito tbody');
             tbody.innerHTML = '';
-            let subtotalGeneral = 0;
-            
-            carrito.forEach(item => {
-                item.precio = item.precioOriginal;
-                let subtotal = item.precio * item.cantidad;
-                subtotalGeneral += subtotal;
-            });
-
-            const tipoDesc = document.getElementById('tipo-descuento').value;
-            const valorDescInput = document.getElementById('valor-descuento').value;
-            let valorDesc = valorDescInput === "" ? 0 : parseFloat(valorDescInput) || 0;
-            let descuentoCalculado = 0;
-
-            if (tipoDesc === 'monto') {
-                descuentoCalculado = valorDesc;
-            } else {
-                descuentoCalculado = subtotalGeneral * (valorDesc / 100);
-            }
-
-            let factorDescuento = subtotalGeneral > 0 ? (subtotalGeneral - Math.min(descuentoCalculado, subtotalGeneral)) / subtotalGeneral : 1;
+            let totalGlobal = 0;
 
             carrito.forEach((item, index) => {
-                let precioConDescuentoUnitario = item.precioOriginal * factorDescuento;
-                let subtotalRealItem = precioConDescuentoUnitario * item.cantidad;
-                
-                tbody.innerHTML += `<tr>
-                    <td>${item.nombre}</td>
-                    <td><input type="number" class="input-carrito-cant" value="${item.cantidad}" min="1" onchange="cambiarCantidadCarrito(${index}, this)"></td>
-                    <td>$${subtotalRealItem.toFixed(2)}</td>
-                    <td><button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarDelCarrito(${index})">🗑️</button></td>
-                </tr>`;
+                // Cálculo de descuento unitario aplicado
+                let descUnit = item.descuentoUnitario || 0;
+                let descuentoCalculadoPorUnidad = 0;
+
+                if (item.tipoDescuentoUnitario === 'porcentaje') {
+                    descuentoCalculadoPorUnidad = (item.precio * descUnit) / 100;
+                } else {
+                    descuentoCalculadoPorUnidad = descUnit;
+                }
+
+                // Asegurar que el descuento unitario no supere el precio del producto
+                if (descuentoCalculadoPorUnidad > item.precio) {
+                    descuentoCalculadoPorUnidad = item.precio;
+                }
+
+                const precioFinalUnitario = item.precio - descuentoCalculadoPorUnidad;
+                const subtotalItem = precioFinalUnitario * item.cantidad;
+                totalGlobal += subtotalItem;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.nombre}</td>
+                        <td><input type="number" class="input-carrito-cant" value="${item.cantidad}" min="1" onchange="cambiarCantidadCarrito(${index}, this.value)"></td>
+                        <td>$${item.precio.toFixed(2)}</td>
+                        <td><input type="number" step="0.01" class="input-carrito-desc" value="${item.descuentoUnitario || ''}" placeholder="0" oninput="cambiarDescuentoUnitario(${index}, this.value)"></td>
+                        <td>
+                            <select style="width:75px; padding:2px; font-size:0.75rem;" onchange="cambiarTipoDescuentoUnitario(${index}, this.value)">
+                                <option value="monto" ${item.tipoDescuentoUnitario === 'monto' ? 'selected' : ''}>$</option>
+                                <option value="porcentaje" ${item.tipoDescuentoUnitario === 'porcentaje' ? 'selected' : ''}>%</option>
+                            </select>
+                        </td>
+                        <td><strong>$${subtotalItem.toFixed(2)}</strong></td>
+                        <td><button type="button" class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="eliminarItemCarrito(${index})">X</button></td>
+                    </tr>
+                `;
             });
 
-            let totalFinal = subtotalGeneral - descuentoCalculado;
-            if (totalFinal < 0) totalFinal = 0;
-
-            document.getElementById('total-venta').innerText = totalFinal.toFixed(2);
+            document.getElementById('total-venta').innerText = totalGlobal.toFixed(2);
             calcularCambio();
         }
 
-        function eliminarDelCarrito(index) {
+        function cambiarCantidadCarrito(index, nuevaCant) {
+            const cantidad = parseInt(nuevaCant) || 1;
+            const item = carrito[index];
+            const p = productos[item.codigo];
+
+            if (p && cantidad > p.stock) {
+                alert('Stock insuficiente.');
+                actualizarTablaCarrito();
+                return;
+            }
+            item.cantidad = cantidad;
+            actualizarTablaCarrito();
+        }
+
+        function cambiarDescuentoUnitario(index, valor) {
+            carrito[index].descuentoUnitario = parseFloat(valor) || 0;
+            actualizarTablaCarrito();
+        }
+
+        function cambiarTipoDescuentoUnitario(index, tipo) {
+            carrito[index].tipoDescuentoUnitario = tipo;
+            actualizarTablaCarrito();
+        }
+
+        function eliminarItemCarrito(index) {
             carrito.splice(index, 1);
             actualizarTablaCarrito();
         }
 
         function cambiarMetodoPago() {
             const metodo = document.getElementById('metodo-pago').value;
-            document.getElementById('contenedor-efectivo').style.display = metodo === 'Efectivo' ? 'block' : 'none';
+            const contenedorEfectivo = document.getElementById('contenedor-efectivo');
+            if (metodo === 'Efectivo') {
+                contenedorEfectivo.style.display = 'block';
+            } else {
+                contenedorEfectivo.style.display = 'none';
+            }
         }
 
         function calcularCambio() {
-            const total = parseFloat(document.getElementById('total-venta').innerText) || 0;
-            const pagadoInput = document.getElementById('monto-pagado').value;
-            if (pagadoInput === "") {
-                document.getElementById('monto-cambio').innerText = '0.00';
-                return;
-            }
-            const pagado = parseFloat(pagadoInput) || 0;
-            const cambio = pagado - total;
+            const metodo = document.getElementById('metodo-pago').value;
+            if (metodo !== 'Efectivo') return;
+
+            const totalVenta = parseFloat(document.getElementById('total-venta').innerText) || 0;
+            const montoPagado = parseFloat(document.getElementById('monto-pagado').value) || 0;
+            const cambio = montoPagado - totalVenta;
+
             document.getElementById('monto-cambio').innerText = cambio >= 0 ? cambio.toFixed(2) : '0.00';
         }
 
         function procesarVenta() {
-            if (carrito.length === 0) return alert('El carrito está vacío');
-            const total = parseFloat(document.getElementById('total-venta').innerText) || 0;
-            const costoTotal = carrito.reduce((acc, i) => acc + (i.costo * i.cantidad), 0);
-            const metodo = document.getElementById('metodo-pago').value;
-            const cliente = document.getElementById('venta-cliente').value;
-
-            if (metodo === 'Efectivo') {
-                const pagadoInput = document.getElementById('monto-pagado').value;
-                if (pagadoInput === "") return alert('Ingresa el monto con el que paga el cliente');
-                const pagado = parseFloat(pagadoInput) || 0;
-                if (pagado < total) return alert('El monto pagado es menor al total');
+            if (carrito.length === 0) {
+                alert('El carrito está vacío.');
+                return;
             }
 
-            let subtotalGeneral = carrito.reduce((acc, i) => acc + (i.precioOriginal * i.cantidad), 0);
-            const tipoDesc = document.getElementById('tipo-descuento').value;
-            const valorDescInput = document.getElementById('valor-descuento').value;
-            let valorDesc = valorDescInput === "" ? 0 : parseFloat(valorDescInput) || 0;
-            let descuentoCalculado = tipoDesc === 'monto' ? valorDesc : subtotalGeneral * (valorDesc / 100);
-            let factorDescuento = subtotalGeneral > 0 ? (subtotalGeneral - Math.min(descuentoCalculado, subtotalGeneral)) / subtotalGeneral : 1;
+            const cliente = document.getElementById('venta-cliente').value;
+            const metodoPago = document.getElementById('metodo-pago').value;
+            
+            let subtotalSinDescuentoGlobal = 0;
+            let totalConDescuentoGlobal = 0;
+            let costoTotalItem = 0;
 
-            let tieneDescuentoAplicado = descuentoCalculado > 0;
+            const itemsProcesados = carrito.map(item => {
+                let descUnit = item.descuentoUnitario || 0;
+                let descuentoCalc = item.tipoDescuentoUnitario === 'porcentaje' ? (item.precio * descUnit) / 100 : descUnit;
+                if (descuentoCalc > item.precio) descuentoCalc = item.precio;
 
-            let itemsParaVenta = carrito.map(item => ({
-                codigo: item.codigo,
-                nombre: item.nombre,
-                precio: item.precioOriginal * factorDescuento,
-                precioOriginalUnitario: item.precioOriginal,
-                costo: item.costo,
-                cantidad: item.cantidad
-            }));
+                const precioFinalUnit = item.precio - descuentoCalc;
+                const subtotalItemReal = precioFinalUnit * item.cantidad;
+                const subtotalItemIdeal = item.precio * item.cantidad;
+                const costoItemTotal = item.costo * item.cantidad;
 
+                subtotalSinDescuentoGlobal += subtotalItemIdeal;
+                totalConDescuentoGlobal += subtotalItemReal;
+                costoTotalItem += costoItemTotal;
+
+                return {
+                    codigo: item.codigo,
+                    nombre: item.nombre,
+                    precioOriginal: item.precio,
+                    descuentoUnitarioAplicado: descuentoCalc,
+                    tipoDescuento: item.tipoDescuentoUnitario,
+                    precioFinalUnitario: precioFinalUnit,
+                    cantidad: item.cantidad,
+                    subtotalIdeal: subtotalItemIdeal,
+                    subtotalReal: subtotalItemReal,
+                    costoTotal: costoItemTotal
+                };
+            });
+
+            if (metodoPago === 'Efectivo') {
+                const montoPagado = parseFloat(document.getElementById('monto-pagado').value) || 0;
+                if (montoPagado < totalConDescuentoGlobal) {
+                    alert('El monto pagado es menor al total de la venta.');
+                    return;
+                }
+            }
+
+            // Descontar inventario localmente
             carrito.forEach(item => {
                 if (productos[item.codigo]) {
                     productos[item.codigo].stock -= item.cantidad;
                 }
             });
 
-            const venta = {
-                fecha: new Date().toLocaleString(),
+            const fechaHora = new Date().toLocaleString();
+            const descuentoTotalGlobal = subtotalSinDescuentoGlobal - totalConDescuentoGlobal;
+
+            const ventaCompleta = {
+                fecha: fechaHora,
                 cliente,
-                total,
-                costo: costoTotal,
-                metodo,
-                conDescuento: tieneDescuentoAplicado,
-                items: itemsParaVenta
+                items: itemsProcesados,
+                subtotal: subtotalSinDescuentoGlobal,
+                descuento: descuentoTotalGlobal,
+                total: totalConDescuentoGlobal,
+                costo: costoTotalItem,
+                metodoPago
             };
 
-            ventasDelDia.push(venta);
-            ultimaVentaRealizada = venta;
+            ventasDelDia.push(ventaCompleta);
+            ultimaVentaRealizada = ventaCompleta;
 
+            // Guardar cambios en IndexedDB
             guardarEnDB('productos', productos);
-            guardarEnDB('ventasDelDia', ventasDelDia);
+            guardarEnDB('ventasDelDia', ventasDelDia, () => {
+                actualizarTablaProductos();
+                actualizarListaSugerencias();
+                actualizarVistaCorte();
+                actualizarVistaBalance();
 
-            carrito = [];
-            document.getElementById('valor-descuento').value = "";
-            document.getElementById('monto-pagado').value = "";
-            actualizarTablaCarrito();
-            actualizarTablaProductos();
-            actualizarVistaCorte();
-            actualizarVistaBalance();
+                // Limpiar carrito
+                carrito = [];
+                document.getElementById('monto-pagado').value = '';
+                actualizarTablaCarrito();
 
-            document.getElementById('btn-imprimir-ultimo').disabled = false;
-            subirALaNube(true);
-            alert('¡Venta completada y sincronizada con éxito!');
+                document.getElementById('btn-imprimir-ultimo').removeAttribute('disabled');
+                subirALaNube(true);
+                alert('¡Venta completada con éxito!');
+            });
         }
 
+        // TICKET PDF (jsPDF)
+        function visualizarUltimoTicketPDF() {
+            if (!ultimaVentaRealizada) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: [80, 160] });
+
+            doc.setFont("Helvetica", "bold");
+            doc.setFontSize(11);
+            doc.text("TRANZAKS - TICKET DE VENTA", 40, 10, { align: "center" });
+
+            doc.setFontSize(8);
+            doc.setFont("Helvetica", "normal");
+            doc.text(`Fecha: ${ultimaVentaRealizada.fecha}`, 5, 17);
+            doc.text(`Cliente: ${ultimaVentaRealizada.cliente}`, 5, 22);
+            doc.text(`Pago: ${ultimaVentaRealizada.metodoPago}`, 5, 27);
+
+            doc.line(5, 30, 75, 30);
+            let y = 35;
+            doc.text("Cant / Producto", 5, y);
+            doc.text("Subtotal", 60, y);
+            y += 5;
+
+            ultimaVentaRealizada.items.forEach(item => {
+                doc.text(`${item.cantidad} x ${item.nombre}`, 5, y);
+                doc.text(`$${item.subtotalReal.toFixed(2)}`, 60, y);
+                y += 4;
+                if (item.descuentoUnitarioAplicado > 0) {
+                    doc.setFont("Helvetica", "italic");
+                    doc.setFontSize(7);
+                    doc.text(`   (Desc. unit: -$${item.descuentoUnitarioAplicado.toFixed(2)})`, 5, y);
+                    doc.setFont("Helvetica", "normal");
+                    doc.setFontSize(8);
+                    y += 4;
+                }
+                y += 1;
+            });
+
+            doc.line(5, y, 75, y);
+            y += 5;
+
+            if (ultimaVentaRealizada.descuento > 0) {
+                doc.text(`Valor Inicial: $${ultimaVentaRealizada.subtotal.toFixed(2)}`, 5, y);
+                y += 4;
+                doc.text(`Descuentos: -$${ultimaVentaRealizada.descuento.toFixed(2)}`, 5, y);
+                y += 5;
+            }
+
+            doc.setFont("Helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text(`TOTAL: $${ultimaVentaRealizada.total.toFixed(2)}`, 5, y);
+
+            doc.setFontSize(8);
+            doc.setFont("Helvetica", "italic");
+            doc.text("¡Gracias por su compra!", 40, y + 10, { align: "center" });
+
+            const pdfData = doc.output('datauristring');
+            const ventana = window.open();
+            ventana.document.write(`<iframe width='100%' height='100%' src='${pdfData}'></iframe>`);
+        }
+
+        // CORTE Y BALANCE
         function actualizarVistaCorte() {
+            let ingresosBrutos = 0;
+            let costoTotal = 0;
             const tbody = document.querySelector('#tabla-historial tbody');
             tbody.innerHTML = '';
-            let totalIngresos = 0;
-            let totalCostos = 0;
+
             ventasDelDia.forEach((v, index) => {
-                totalIngresos += v.total;
-                totalCostos += v.costo;
-                tbody.innerHTML += `<tr><td>${v.fecha}<br><small>${v.cliente}</small></td><td>$${v.total.toFixed(2)}</td><td>${v.metodo}</td><td><button type="button" class="btn-secondary" style="padding:2px 6px; width:auto;" onclick="verTicketDetalle(${index})">📄</button> <button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarVentaDelCorte(${index})">🗑️</button></td></tr>`;
+                ingresosBrutos += v.total;
+                costoTotal += v.costo;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${v.fecha}<br><small>${v.cliente}</small></td>
+                        <td>$${v.total.toFixed(2)}</td>
+                        <td>${v.metodoPago}</td>
+                        <td><button type="button" class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="eliminarVentaDia(${index})">X</button></td>
+                    </tr>
+                `;
             });
+
+            const gananciaNeta = ingresosBrutos - costoTotal;
+
             document.getElementById('cant-ventas').innerText = ventasDelDia.length;
-            document.getElementById('total-ingresos').innerText = totalIngresos.toFixed(2);
-            document.getElementById('total-costos').innerText = totalCostos.toFixed(2);
-            document.getElementById('total-ganancia').innerText = (totalIngresos - totalCostos).toFixed(2);
+            document.getElementById('total-ingresos').innerText = ingresosBrutos.toFixed(2);
+            document.getElementById('total-costos').innerText = costoTotal.toFixed(2);
+            document.getElementById('total-ganancia').innerText = gananciaNeta.toFixed(2);
         }
 
-        function eliminarVentaDelCorte(index) {
-            if (confirm('¿Estás seguro de eliminar esta venta? Los productos se devolverán al inventario.')) {
-                const ventaEliminada = ventasDelDia[index];
-                
-                if (ventaEliminada && ventaEliminada.items) {
-                    ventaEliminada.items.forEach(i => {
-                        if (productos[i.codigo]) {
-                            productos[i.codigo].stock += i.cantidad;
-                        }
-                    });
+        function eliminarVentaDia(index) {
+            if (!confirm('¿Desea cancelar esta venta del día?')) return;
+            const v = ventasDelDia[index];
+            v.items.forEach(item => {
+                if (productos[item.codigo]) {
+                    productos[item.codigo].stock += item.cantidad;
                 }
-
-                ventasDelDia.splice(index, 1);
-
-                guardarEnDB('productos', productos);
-                guardarEnDB('ventasDelDia', ventasDelDia);
-
+            });
+            ventasDelDia.splice(index, 1);
+            guardarEnDB('productos', productos);
+            guardarEnDB('ventasDelDia', ventasDelDia, () => {
                 actualizarTablaProductos();
                 actualizarVistaCorte();
                 actualizarVistaBalance();
                 subirALaNube(true);
-                alert('Venta eliminada y stock devuelto.');
-            }
+            });
         }
 
         function actualizarVistaBalance() {
-            let totalIngresos = 0;
-            let totalCosto = 0;
-            
-            let ingDesc = 0, cosDesc = 0;
-            let ingNormal = 0, cosNormal = 0;
-
-            let productosVendidosMap = {};
+            let ingresosNetos = 0;
+            let costosNetos = 0;
+            let ingresosSinDesc = 0;
+            let costosSinDesc = 0;
+            const productosVendidosMap = {};
 
             ventasDelDia.forEach(v => {
-                totalIngresos += v.total;
-                totalCosto += v.costo;
+                ingresosNetos += v.total;
+                costosNetos += v.costo;
+                ingresosSinDesc += v.subtotal;
+                costosSinDesc += v.costo;
 
-                let ventaIngreso = v.total;
-                let ventaCosto = v.costo;
-
-                if (v.conDescuento) {
-                    ingDesc += ventaIngreso;
-                    cosDesc += ventaCosto;
-                } else {
-                    ingNormal += ventaIngreso;
-                    cosNormal += ventaCosto;
-                }
-
-                v.items.forEach(i => {
-                    if (!productosVendidosMap[i.nombre]) {
-                        productosVendidosMap[i.nombre] = { cant: 0, ingreso: 0, costo: 0 };
+                v.items.forEach(item => {
+                    if (!productosVendidosMap[item.codigo]) {
+                        productosVendidosMap[item.codigo] = {
+                            nombre: item.nombre,
+                            cantidad: 0,
+                            ingresoReal: 0,
+                            costo: 0
+                        };
                     }
-                    productosVendidosMap[i.nombre].cant += i.cantidad;
-                    productosVendidosMap[i.nombre].ingreso += (i.precio * i.cantidad);
-                    productosVendidosMap[i.nombre].costo += (i.costo * i.cantidad);
+                    productosVendidosMap[item.codigo].cantidad += item.cantidad;
+                    productosVendidosMap[item.codigo].ingresoReal += item.subtotalReal;
+                    productosVendidosMap[item.codigo].costo += item.costoTotal;
                 });
             });
 
-            document.getElementById('balance-ingresos').innerText = totalIngresos.toFixed(2);
-            document.getElementById('balance-egresos').innerText = totalCosto.toFixed(2);
-            document.getElementById('balance-ganancia').innerText = (totalIngresos - totalCosto).toFixed(2);
+            const gananciaNetaActual = ingresosNetos - costosNetos;
+            document.getElementById('balance-ingresos').innerText = ingresosNetos.toFixed(2);
+            document.getElementById('balance-egresos').innerText = costosNetos.toFixed(2);
+            document.getElementById('balance-ganancia').innerText = gananciaNetaActual.toFixed(2);
 
-            document.getElementById('bal-ing-desc').innerText = ingDesc.toFixed(2);
-            document.getElementById('bal-cos-desc').innerText = cosDesc.toFixed(2);
-            document.getElementById('bal-gan-desc').innerText = (ingDesc - cosDesc).toFixed(2);
+            // Comparativas
+            document.getElementById('bal-ing-desc').innerText = ingresosNetos.toFixed(2);
+            document.getElementById('bal-cos-desc').innerText = costosNetos.toFixed(2);
+            document.getElementById('bal-gan-desc').innerText = gananciaNetaActual.toFixed(2);
 
-            document.getElementById('bal-ing-normal').innerText = ingNormal.toFixed(2);
-            document.getElementById('bal-cos-normal').innerText = cosNormal.toFixed(2);
-            document.getElementById('bal-gan-normal').innerText = (ingNormal - cosNormal).toFixed(2);
+            const gananciaNorm = ingresosSinDesc - costosSinDesc;
+            document.getElementById('bal-ing-normal').innerText = ingresosSinDesc.toFixed(2);
+            document.getElementById('bal-cos-normal').innerText = costosSinDesc.toFixed(2);
+            document.getElementById('bal-gan-normal').innerText = gananciaNorm.toFixed(2);
 
             const tbody = document.querySelector('#tabla-balance-productos tbody');
             tbody.innerHTML = '';
-            for (let prod in productosVendidosMap) {
-                const p = productosVendidosMap[prod];
-                const gananciaProd = p.ingreso - p.costo;
-                tbody.innerHTML += `<tr><td>${prod}</td><td>${p.cant}</td><td>$${p.ingreso.toFixed(2)}</td><td>$${p.costo.toFixed(2)}</td><td>$${gananciaProd.toFixed(2)}</td></tr>`;
+            for (let codigo in productosVendidosMap) {
+                const pv = productosVendidosMap[codigo];
+                const gananciaProd = pv.ingresoReal - pv.costo;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${pv.nombre}</td>
+                        <td>${pv.cantidad}</td>
+                        <td>$${pv.ingresoReal.toFixed(2)}</td>
+                        <td>$${pv.costo.toFixed(2)}</td>
+                        <td>$${gananciaProd.toFixed(2)}</td>
+                    </tr>
+                `;
             }
         }
 
         function reiniciarDia() {
-            if (ventasDelDia.length === 0) return alert('No hay ventas registradas hoy para cerrar.');
-            if (confirm('¿Estás seguro de cerrar caja? Esto archivará el día actual en el historial mensual.')) {
+            if (!confirm('¿Realizar corte diario y cerrar caja? Esta acción archivará las ventas del día.')) return;
+            
+            if (ventasDelDia.length > 0) {
                 const fechaHoy = new Date().toISOString().split('T')[0];
-                const totalVentasDia = ventasDelDia.reduce((acc, v) => acc + v.total, 0);
-                const gananciaDia = ventasDelDia.reduce((acc, v) => acc + (v.total - v.costo), 0);
+                let totalDia = ventasDelDia.reduce((acc, v) => acc + v.total, 0);
+                let gananciaDia = ventasDelDia.reduce((acc, v) => acc + (v.total - v.costo), 0);
 
                 historialMensual.push({
                     fecha: fechaHoy,
                     ventasCount: ventasDelDia.length,
-                    total: totalVentasDia,
+                    total: totalDia,
                     ganancia: gananciaDia,
                     detalleVentas: [...ventasDelDia]
                 });
 
                 ventasDelDia = [];
-                guardarEnDB('ventasDelDia', ventasDelDia);
                 guardarEnDB('historialMensual', historialMensual);
-
-                actualizarVistaCorte();
-                actualizarVistaBalance();
-                subirALaNube(true);
-                alert('Caja cerrada y respaldada.');
+                guardarEnDB('ventasDelDia', ventasDelDia, () => {
+                    actualizarVistaCorte();
+                    actualizarVistaBalance();
+                    subirALaNube(true);
+                    alert('Corte de caja completado con éxito.');
+                });
+            } else {
+                alert('No hay ventas registradas hoy para cerrar.');
             }
         }
 
+        // MENSUAL
         function cargarOpcionesMeses() {
             const select = document.getElementById('select-mes-filtro');
-            select.innerHTML = '';
             const mesesMap = {};
+            
             historialMensual.forEach(h => {
                 const mesAnio = h.fecha.substring(0, 7);
                 mesesMap[mesAnio] = true;
             });
+
+            let html = '';
             for (let mes in mesesMap) {
-                select.innerHTML += `<option value="${mes}">${mes}</option>`;
+                html += `<option value="${mes}">${mes}</option>`;
             }
+            if (!html) html = '<option value="">Sin registros</option>';
+            select.innerHTML = html;
+            actualizarVistaMensual();
         }
 
         function actualizarVistaMensual() {
             const mesSeleccionado = document.getElementById('select-mes-filtro').value;
             const tbody = document.querySelector('#tabla-cortes-mensuales tbody');
             tbody.innerHTML = '';
+
             let diasCount = 0;
-            let mesIngresos = 0;
-            let mesGanancias = 0;
+            let totalMes = 0;
+            let gananciaMes = 0;
 
             historialMensual.forEach(h => {
                 if (h.fecha.startsWith(mesSeleccionado)) {
                     diasCount++;
-                    mesIngresos += h.total;
-                    mesGanancias += h.ganancia;
-                    tbody.innerHTML += `<tr><td>${h.fecha}</td><td>${h.ventasCount}</td><td>$${h.total.toFixed(2)}</td><td>$${h.ganancia.toFixed(2)}</td></tr>`;
+                    totalMes += h.total;
+                    gananciaMes += h.ganancia;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${h.fecha}</td>
+                            <td>${h.ventasCount}</td>
+                            <td>$${h.total.toFixed(2)}</td>
+                            <td>$${h.ganancia.toFixed(2)}</td>
+                        </tr>
+                    `;
                 }
             });
 
             document.getElementById('mes-dias').innerText = diasCount;
-            document.getElementById('mes-total-ingresos').innerText = mesIngresos.toFixed(2);
-            document.getElementById('mes-total-ganancias').innerText = mesGanancias.toFixed(2);
-        }
-
-        function visualizarUltimoTicketPDF() {
-            if (!ultimaVentaRealizada) return alert('No hay ticket reciente.');
-            generarPDFTicket(ultimaVentaRealizada);
-        }
-
-        function verTicketDetalle(index) {
-            generarPDFTicket(ventasDelDia[index]);
-        }
-
-        function generarPDFTicket(venta) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ unit: 'mm', format: [80, 150] });
-            
-            doc.setFont("Helvetica", "bold");
-            doc.setFontSize(12);
-            doc.text("TRANZAKS", 40, 10, { align: "center" });
-            
-            doc.setFontSize(8);
-            doc.setFont("Helvetica", "normal");
-            doc.text("Punto de Venta Multi-dispositivo", 40, 15, { align: "center" });
-            doc.text(`Fecha: ${venta.fecha}`, 5, 22);
-            doc.text(`Cliente: ${venta.cliente}`, 5, 26);
-            doc.text(`Pago: ${venta.metodo}`, 5, 30);
-            
-            doc.line(5, 33, 75, 33);
-            
-            let y = 38;
-            doc.setFont("Helvetica", "bold");
-            doc.text("Cant / Producto", 5, y);
-            doc.text("Subtotal", 60, y);
-            y += 5;
-            
-            doc.setFont("Helvetica", "normal");
-            venta.items.forEach(i => {
-                doc.text(`${i.cantidad}x ${i.nombre}`, 5, y);
-                doc.text(`$${(i.precio * i.cantidad).toFixed(2)}`, 60, y);
-                y += 5;
-            });
-            
-            doc.line(5, y + 2, 75, y + 2);
-            y += 7;
-            
-            doc.setFont("Helvetica", "bold");
-            doc.text(`TOTAL: $${venta.total.toFixed(2)}`, 75, y, { align: "right" });
-            
-            window.open(doc.output('bloburl'), '_blank');
+            document.getElementById('mes-total-ingresos').innerText = totalMes.toFixed(2);
+            document.getElementById('mes-total-ganancias').innerText = gananciaMes.toFixed(2);
         }
     </script>
 </body>

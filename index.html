@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tranzaks - Punto de Venta Compartido</title>
+    <title>Tranzaks - Punto de Venta Sincronizado</title>
     <!-- Librería jsPDF para tickets -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f1f5f9; color: #333; display: flex; height: 100vh; overflow: hidden; }
-
+        
         .sidebar {
             width: 180px;
             background-color: #1e293b;
@@ -164,7 +164,7 @@
 
     <div class="main-container">
         <div class="topbar">
-            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Tranzaks - Punto de Venta Compartido</h1>
+            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Tranzaks - Multi-dispositivo Sincronizado</h1>
             <button class="menu-toggle" onclick="toggleSidebar()">☰ Menú</button>
         </div>
 
@@ -218,7 +218,7 @@
                         <p style="margin: 5px 0;"><strong>Cambio:</strong> $<span id="monto-cambio">0.00</span></p>
                     </div>
 
-                    <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta y Sincronizar</button>
+                    <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta</button>
                     <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="visualizarUltimoTicketPDF()" disabled style="margin-top: 5px;">Visualizar PDF Último Ticket</button>
                 </div>
             </div>
@@ -230,7 +230,7 @@
                     <form id="form-cliente">
                         <input type="text" id="cli-nombre" placeholder="Nombre completo o razón social" required>
                         <input type="text" id="cli-telefono" placeholder="Número telefónico" required>
-                        <button type="submit">Guardar y Sincronizar Cliente</button>
+                        <button type="submit">Guardar Cliente</button>
                     </form>
 
                     <h3 style="margin-top:20px; font-size: 1rem;">Lista de Clientes</h3>
@@ -249,8 +249,8 @@
             <div id="sec-balance" class="tab-content" style="display: none;">
                 <div class="card">
                     <h2>Balance General del Día</h2>
-                    <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Descargar Datos Nuevos de la Nube</button>
-
+                    <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Sincronizar Datos de la Nube Ahora</button>
+                    
                     <div class="corte-resumen">
                         <p><strong>Total Ingresos del Día:</strong> $<span id="balance-ingresos">0.00</span></p>
                         <p><strong>Total Costo de Producto:</strong> $<span id="balance-egresos">0.00</span></p>
@@ -297,12 +297,12 @@
                             <input type="number" step="0.01" id="prod-precio" placeholder="Precio ($)" required>
                         </div>
                         <input type="number" id="prod-stock" placeholder="Stock inicial" required>
-
+                        
                         <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto:</label>
                         <div id="contenedor-preview-imagen" style="margin-bottom: 5px;"></div>
                         <input type="file" id="prod-imagen" accept="image/*">
 
-                        <button type="submit">Guardar y Sincronizar Producto</button>
+                        <button type="submit">Guardar Producto</button>
                     </form>
 
                     <div class="inversion-box">
@@ -325,8 +325,8 @@
             <div id="sec-corte" class="tab-content" style="display: none;">
                 <div class="card">
                     <h2>Corte de Caja del Día</h2>
-                    <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Actualizar con la Nube</button>
-
+                    <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Sincronizar con la Nube</button>
+                    
                     <div class="corte-resumen">
                         <p><strong>Ventas Realizadas Hoy:</strong> <span id="cant-ventas">0</span></p>
                         <p><strong>Ingresos Brutos:</strong> $<span id="total-ingresos">0.00</span></p>
@@ -345,7 +345,7 @@
                         </table>
                     </div>
                     <br>
-                    <button type="button" class="btn-danger" onclick="reiniciarDia()">Cerrar Caja (Sincronizar Corte)</button>
+                    <button type="button" class="btn-danger" onclick="reiniciarDia()">Cerrar Caja (Corte Diario)</button>
                 </div>
             </div>
 
@@ -380,18 +380,18 @@
                 <div class="card">
                     <h2>Conexión con Google Sheets</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Pega la URL de tu Apps Script y tu Clave Secreta en todos tus dispositivos para enlazarlos a la misma base de datos.
+                        Pega la URL de tu Apps Script y tu Clave Secreta. La app se sincronizará automáticamente en cada cambio.
                     </p>
 
                     <label>URL de Google Apps Script:</label>
-                    <input type="text" id="nube-database-url" placeholder="https://script.google.com/macros/s/.../exec">
-
+                    <input type="text" id="nube-database-url" placeholder="https://script.google.com/macros/s/.../exec" oninput="guardarCredencialesNube()">
+                    
                     <label>Clave o Token Secreto:</label>
-                    <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123">
+                    <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123" oninput="guardarCredencialesNube()">
 
                     <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <button type="button" class="btn-cloud" onclick="subirALaNube()">☁️ Guardar / Sincronizar Cambios</button>
-                        <button type="button" class="btn-info" onclick="descargarDeLaNube()">📥 Descargar Datos Actualizados</button>
+                        <button type="button" class="btn-cloud" onclick="subirALaNube()">☁️ Sincronizar Manualmente Ahora</button>
+                        <button type="button" class="btn-info" onclick="descargarDeLaNube()">📥 Descargar Datos Forzados</button>
                     </div>
                 </div>
             </div>
@@ -459,11 +459,19 @@
             store.get('nubeUrl').onsuccess = (e) => { 
                 if(e.target.result) {
                     document.getElementById('nube-database-url').value = e.target.result;
-                    setTimeout(() => descargarDeLaNube(true), 1000);
+                    // Auto-sincronizar al iniciar la aplicación de forma inmediata
+                    setTimeout(() => descargarDeLaNube(true), 300);
                 }
             };
             store.get('nubeToken').onsuccess = (e) => { if(e.target.result) document.getElementById('nube-token').value = e.target.result; };
             store.get('nipSeguridad').onsuccess = (e) => { nipSeguridad = e.target.result || ""; actualizarInterfazNIP(); };
+        }
+
+        function guardarCredencialesNube() {
+            const url = document.getElementById('nube-database-url').value.trim();
+            const token = document.getElementById('nube-token').value.trim();
+            guardarEnDB('nubeUrl', url);
+            guardarEnDB('nubeToken', token);
         }
 
         function actualizarInterfazNIP() {
@@ -505,10 +513,9 @@
         function subirALaNube(silencioso = false) {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
-            if (!url) return !silencioso && alert('Ingresa la URL de tu Google Apps Script.');
-
-            guardarEnDB('nubeUrl', url);
-            guardarEnDB('nubeToken', token);
+            if (!url) return; // Si no hay URL configurada, omite la sincronización en segundo plano sin interrumpir al usuario
+            
+            guardarCredencialesNube();
 
             const datos = { token, productos, clientes, ventasDelDia, historialMensual };
             return fetch(url, {
@@ -525,7 +532,7 @@
                 }
             })
             .catch(err => {
-                if (!silencioso) alert('Error de conexión o permisos de CORS/Apps Script: ' + err);
+                if (!silencioso) alert('Error de conexión con Apps Script: ' + err);
             });
         }
 
@@ -533,9 +540,8 @@
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
             if (!url) return;
-
-            guardarEnDB('nubeUrl', url);
-            guardarEnDB('nubeToken', token);
+            
+            guardarCredencialesNube();
 
             fetch(`${url}?token=${encodeURIComponent(token)}`)
             .then(res => res.json())
@@ -545,7 +551,7 @@
                     return;
                 }
                 if (!data || Object.keys(data).length === 0) return;
-
+                
                 productos = data.productos || {};
                 clientes = data.clientes || {};
                 ventasDelDia = data.ventasDelDia || [];
@@ -580,8 +586,7 @@
             actualizarTablaClientes();
             actualizarSelectClientes();
             e.target.reset();
-            subirALaNube(true);
-            alert('Cliente guardado y sincronizado.');
+            subirALaNube(true); // Sincronización automática silenciosa
         });
 
         function eliminarCliente(nombre) {
@@ -661,8 +666,7 @@
             actualizarListaSugerencias();
             form.reset();
             document.getElementById('contenedor-preview-imagen').innerHTML = '';
-            subirALaNube(true);
-            alert('Producto guardado y sincronizado.');
+            subirALaNube(true); // Sincronización automática silenciosa
         }
 
         function eliminarProducto(codigo) {
@@ -684,11 +688,11 @@
                 inputEl.value = p.stock;
                 return;
             }
-
+            
             p.stock = nuevoStock;
             guardarEnDB('productos', productos);
             actualizarTablaProductos();
-            subirALaNube(true);
+            subirALaNube(true); // Sincronización automática silenciosa
         }
 
         function actualizarTablaProductos() {
@@ -771,7 +775,7 @@
             const tbody = document.querySelector('#tabla-carrito tbody');
             tbody.innerHTML = '';
             let subtotalGeneral = 0;
-
+            
             carrito.forEach(item => {
                 item.precio = item.precioOriginal;
                 let subtotal = item.precio * item.cantidad;
@@ -794,7 +798,7 @@
             carrito.forEach((item, index) => {
                 let precioConDescuentoUnitario = item.precioOriginal * factorDescuento;
                 let subtotalRealItem = precioConDescuentoUnitario * item.cantidad;
-
+                
                 tbody.innerHTML += `<tr>
                     <td>${item.nombre}</td>
                     <td><input type="number" class="input-carrito-cant" value="${item.cantidad}" min="1" onchange="cambiarCantidadCarrito(${index}, this)"></td>
@@ -895,7 +899,7 @@
             actualizarVistaBalance();
 
             document.getElementById('btn-imprimir-ultimo').disabled = false;
-            subirALaNube(true);
+            subirALaNube(true); // Sincronización automática silenciosa al terminar la venta
             alert('¡Venta completada y sincronizada con éxito!');
         }
 
@@ -916,9 +920,9 @@
         }
 
         function eliminarVentaDelCorte(index) {
-            if (confirm('¿Estás seguro de eliminar esta venta? Los productos se devolverán al inventario y se recalculará el balance.')) {
+            if (confirm('¿Estás seguro de eliminar esta venta? Los productos se devolverán al inventario.')) {
                 const ventaEliminada = ventasDelDia[index];
-
+                
                 if (ventaEliminada && ventaEliminada.items) {
                     ventaEliminada.items.forEach(i => {
                         if (productos[i.codigo]) {
@@ -935,15 +939,15 @@
                 actualizarTablaProductos();
                 actualizarVistaCorte();
                 actualizarVistaBalance();
-                subirALaNube(true);
-                alert('Venta eliminada y stock devuelto al inventario.');
+                subirALaNube(true); // Sincronización automática silenciosa
+                alert('Venta eliminada y stock devuelto.');
             }
         }
 
         function actualizarVistaBalance() {
             let totalIngresos = 0;
             let totalCosto = 0;
-
+            
             let ingDesc = 0, cosDesc = 0;
             let ingNormal = 0, cosNormal = 0;
 
@@ -1016,8 +1020,8 @@
 
                 actualizarVistaCorte();
                 actualizarVistaBalance();
-                subirALaNube(true);
-                alert('Caja cerrada y respaldada en el historial mensual.');
+                subirALaNube(true); // Sincronización automática silenciosa
+                alert('Caja cerrada y respaldada.');
             }
         }
 
@@ -1068,39 +1072,39 @@
         function generarPDFTicket(venta) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ unit: 'mm', format: [80, 150] });
-
+            
             doc.setFont("Helvetica", "bold");
             doc.setFontSize(12);
             doc.text("TRANZAKS", 40, 10, { align: "center" });
-
+            
             doc.setFontSize(8);
             doc.setFont("Helvetica", "normal");
             doc.text("Punto de Venta Multi-dispositivo", 40, 15, { align: "center" });
             doc.text(`Fecha: ${venta.fecha}`, 5, 22);
             doc.text(`Cliente: ${venta.cliente}`, 5, 26);
             doc.text(`Pago: ${venta.metodo}`, 5, 30);
-
+            
             doc.line(5, 33, 75, 33);
-
+            
             let y = 38;
             doc.setFont("Helvetica", "bold");
             doc.text("Cant / Producto", 5, y);
             doc.text("Subtotal", 60, y);
             y += 5;
-
+            
             doc.setFont("Helvetica", "normal");
             venta.items.forEach(i => {
                 doc.text(`${i.cantidad}x ${i.nombre}`, 5, y);
                 doc.text(`$${(i.precio * i.cantidad).toFixed(2)}`, 60, y);
                 y += 5;
             });
-
+            
             doc.line(5, y + 2, 75, y + 2);
             y += 7;
-
+            
             doc.setFont("Helvetica", "bold");
             doc.text(`TOTAL: $${venta.total.toFixed(2)}`, 75, y, { align: "right" });
-
+            
             window.open(doc.output('bloburl'), '_blank');
         }
     </script>

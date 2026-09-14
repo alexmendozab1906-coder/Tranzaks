@@ -345,7 +345,7 @@
         .monto-total { font-size: 1.5rem; color: #2c3e50; font-weight: bold; text-align: right; margin: 10px 0; }
         .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
         .corte-resumen p { margin: 6px 0; font-size: 1rem; }
-        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; }
+        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; display: block; margin-bottom: 2px; }
         .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
         .sync-indicator { font-size: 0.8rem; color: #27ae60; font-weight: bold; text-align: right; margin-bottom: 5px; }
 
@@ -827,15 +827,17 @@
                 inversionTotal += (p.costo * p.stock);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img'}</td>
+                    <td>
+                        ${p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img'}
+                        <input type="file" id="file-up-${codigo}" accept="image/*" style="display:none" onchange="subirImagenProductoExistente('${codigo}', this)">
+                        <button class="btn-warning" style="padding:2px 4px; font-size:0.65rem; width:100%;" onclick="document.getElementById('file-up-${codigo}').click()">Cambiar</button>
+                    </td>
                     <td>${p.codigo}</td>
                     <td>${p.nombre}</td>
                     <td>$${p.costo.toFixed(2)}</td>
                     <td>$${p.precio.toFixed(2)}</td>
                     <td>${p.stock}</td>
                     <td>
-                        <input type="file" id="file-up-${codigo}" accept="image/*" style="display:none" onchange="subirImagenProductoExistente('${codigo}', this)">
-                        <button class="btn-warning" style="padding:4px 6px; font-size:0.75rem; margin-bottom:2px;" onclick="document.getElementById('file-up-${codigo}').click()">🖼️ Img</button>
                         <button class="btn-danger" style="padding:4px 6px; font-size:0.75rem;" onclick="eliminarProducto('${codigo}')">X</button>
                     </td>
                 `;
@@ -1009,6 +1011,7 @@
                 return alert('Precio inválido.');
             }
 
+            // Permite aplicar cualquier precio (incluso menor al de catálogo) de forma válida
             carrito[index].precio = nuevoPrecio;
             carrito[index].subtotal = carrito[index].cantidad * nuevoPrecio;
             renderizarCarrito();

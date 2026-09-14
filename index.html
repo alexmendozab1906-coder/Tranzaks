@@ -705,11 +705,15 @@
         };
 
         function guardarEnDB(clave, valor, callback) {
-            if (!db) return;
+            if (!db) {
+                if (callback) callback();
+                return;
+            }
             const transaction = db.transaction(['almacen'], 'readwrite');
             const store = transaction.objectStore('almacen');
             const req = store.put(valor, clave);
             req.onsuccess = () => { if (callback) callback(); };
+            req.onerror = () => { if (callback) callback(); };
         }
 
         function cargarDatosLocalesYrenderizar() {
@@ -814,20 +818,54 @@
                     <td>
                         ${p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img'}
                         <input type="file" id="file-up-${codigo}" accept="image/*" style="display:none" onchange="subirImagenProductoExistente('${codigo}', this)">
-                        <button class="btn-warning" style="padding:2px 4px; font-size:0.65rem; width:100%; margin-top:2px;" onclick="document.getElementById('file-up-${codigo}').click()">Img</button>
+                        <button type="button" class="btn-warning" style="padding:2px 4px; font-size:0.65rem; width:100%; margin-top:2px;" onclick="document.getElementById('file-up-${codigo}').click()">Img</button>
                     </td>
                     <td>${p.codigo}</td>
                     <td>${p.nombre}</td>
                     <td>$${p.costo.toFixed(2)}</td>
                     <td>$${p.precio.toFixed(2)}</td>
-                    <td>${p.stock}</td>
                     <td>
-                        <button class="btn-danger" style="padding:4px 6px; font-size:0.75rem;" onclick="eliminarProducto('${codigo}')">X</button>
+                        ${p.stock}
+                        <button type="button" class="btn-info" style="padding:2px 4px; font-size:0.65rem; margin-top:2px;" onclick="modificarStock('${codigo}')">Stock</button>
+                    </td>
+                    <td>
+                        <button type="button" class="btn-danger" style="padding:4px 6px; font-size:0.75rem;" onclick="eliminarProducto('${codigo}')">X</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             }
             document.getElementById('inversion-total-inventario').innerText = inversionTotal.toFixed(2);
+        }
+
+        function modificarStock(codigo) {
+            const p = productos[codigo];
+            if (!p) return;
+            const nuevoStockStr = prompt(`Modificar stock para "${p.nombre}"\nStock actual: ${p.stock}\n\nIngresa el nuevo stock total o la cantidad a sumar/restar (ej: escribe "+5" para agregar o "-2" para descontar):`, p.stock);
+            
+            if (nuevoStockStr === null) return;
+            
+            let stockFinal = p.stock;
+            const valTrim = nuevoStockStr.trim();
+            
+            if (valTrim.startsWith('+')) {
+                const extra = parseInt(valTrim.substring(1)) || 0;
+                stockFinal += extra;
+            } else if (valTrim.startsWith('-')) {
+                const menos = parseInt(valTrim.substring(1)) || 0;
+                stockFinal -= menos;
+            } else {
+                const absoluto = parseInt(valTrim);
+                if (isNaN(absoluto)) return alert('Valor numérico no válido.');
+                stockFinal = absoluto;
+            }
+
+            if (stockFinal < 0) stockFinal = 0;
+            p.stock = stockFinal;
+
+            guardarEnDB('productos', productos, () => {
+                actualizarTablaProductos();
+                alert(`Stock actualizado exitosamente a: ${p.stock}`);
+            });
         }
 
         function subirImagenProductoExistente(codigo, input) {
@@ -888,7 +926,7 @@
             for (const tel in clientes) {
                 const c = clientes[tel];
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${c.nombre}</td><td>${c.telefono}</td><td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="eliminarCliente('${tel}')">X</button></td>`;
+                tr.innerHTML = `<td>${c.nombre}</td><td>${c.telefono}</td><td><button type="button" class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="eliminarCliente('${tel}')">X</button></td>`;
                 tbody.appendChild(tr);
             }
         }
@@ -966,7 +1004,7 @@
                     <td>$${item.precioOriginal.toFixed(2)}</td>
                     <td><input type="number" step="0.01" min="0" value="${item.descuento}" style="width: 80px; padding: 4px; margin: 0;" oninput="actualizarDescuentoItem(${index}, this.value)"></td>
                     <td>$${item.subtotal.toFixed(2)}</td>
-                    <td><button class="btn-danger" style="padding:4px 6px; font-size:0.75rem;" onclick="quitarItemCarrito(${index})">X</button></td>
+                    <td><button type="button" class="btn-danger" style="padding:4px 6px; font-size:0.75rem;" onclick="quitarItemCarrito(${index})">X</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -980,7 +1018,6 @@
             carrito[index].descuento = desc;
             actualizarSubtotalItem(index);
             
-            // Recalcular total global de forma directa en el DOM para fluidez
             let total = 0;
             carrito.forEach(item => total += item.subtotal);
             document.getElementById('total-venta').innerText = total.toFixed(2);
@@ -993,7 +1030,6 @@
             if (precioEfectivo < 0) precioEfectivo = 0;
             item.subtotal = precioEfectivo;
             
-            // Actualizar celda de subtotal visualmente sin redibujar todo el DOM (evita perder foco en el input)
             const filas = document.querySelectorAll('#tabla-carrito tbody tr');
             if (filas[index]) {
                 const celdas = filas[index].querySelectorAll('td');
@@ -1025,8 +1061,6 @@
             const cliente = document.getElementById('venta-cliente').value;
             const metodoPago = document.getElementById('metodo-pago').value;
             const total = carrito.reduce((acc, item) => acc + item.subtotal, 0);
-            
-            // Cálculo consciente del costo total de la mercancía vendida
             const costoTotal = carrito.reduce((acc, item) => acc + (item.costo * item.cantidad), 0);
 
             if (metodoPago === 'Efectivo') {
@@ -1059,7 +1093,7 @@
                 items: itemsVenta,
                 total,
                 costo: costoTotal,
-                ganancia: total - costoTotal // Si hay descuento consciente, la ganancia reflejará inteligentemente el margen resultante
+                ganancia: total - costoTotal
             };
 
             ventasDelDia.push(ventaData);
@@ -1076,7 +1110,7 @@
                     renderizarCarrito();
                     document.getElementById('monto-pagado').value = '';
                     document.getElementById('btn-imprimir-ultimo').disabled = false;
-                    alert('¡Venta completada con descuento consciente aplicado!');
+                    alert('¡Venta completada con éxito!');
                 });
             });
         }
@@ -1089,7 +1123,7 @@
                 tr.innerHTML = `
                     <td>${v.hora} - ${v.cliente}</td>
                     <td>$${v.total.toFixed(2)}</td>
-                    <td><button class="btn-info" style="padding:4px 8px; font-size:0.8rem;" onclick='verTicket(${JSON.stringify(v)})'>Ver</button></td>
+                    <td><button type="button" class="btn-info" style="padding:4px 8px; font-size:0.8rem;" onclick='verTicket(${JSON.stringify(v)})'>Ver</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -1158,7 +1192,7 @@
                     <td>${v.hora} / ${v.cliente}</td>
                     <td>$${v.total.toFixed(2)}</td>
                     <td>${v.metodoPago}</td>
-                    <td><button class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="eliminarVentaDia(${index})">X</button></td>
+                    <td><button type="button" class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="eliminarVentaDia(${index})">X</button></td>
                 `;
                 tbody.appendChild(tr);
             });

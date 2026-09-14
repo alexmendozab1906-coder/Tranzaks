@@ -135,6 +135,45 @@
         .input-stock-table { width: 70px; padding: 4px; text-align: center; margin: 0; }
         .input-carrito-cant { width: 60px; padding: 4px; text-align: center; margin: 0; }
 
+        /* Estilos del indicador flotante de sincronización */
+        #status-message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #1e293b;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+        }
+        .status-hidden {
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+        }
+        .status-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 position: absolute;
@@ -147,6 +186,11 @@
     </style>
 </head>
 <body>
+
+    <!-- Indicador Flotante de Sincronización -->
+    <div id="status-message" class="status-hidden">
+        <span class="spinner"></span> Sincronizando datos...
+    </div>
 
     <div class="sidebar collapsed" id="sidebar">
         <div class="sidebar-header">📦 Tranzaks</div>
@@ -421,6 +465,23 @@
         let carrito = [];
         let nipSeguridad = "";
 
+        // Funciones del indicador visual flotante
+        const statusMessage = document.getElementById('status-message');
+
+        function mostrarEstado(mensaje = "Sincronizando datos...", conSpinner = true) {
+            const contenido = conSpinner ? `<span class="spinner"></span> ${mensaje}` : mensaje;
+            statusMessage.innerHTML = contenido;
+            statusMessage.classList.remove('status-hidden');
+            statusMessage.classList.add('status-visible');
+        }
+
+        function ocultarEstado(retraso = 2000) {
+            setTimeout(() => {
+                statusMessage.classList.remove('status-visible');
+                statusMessage.classList.add('status-hidden');
+            }, retraso);
+        }
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             if (window.innerWidth <= 768) {
@@ -513,9 +574,10 @@
         function subirALaNube(silencioso = false) {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
-            if (!url) return; // Si no hay URL configurada, omite la sincronización en segundo plano sin interrumpir al usuario
+            if (!url) return; 
             
             guardarCredencialesNube();
+            mostrarEstado("Subiendo datos a Google Sheets...");
 
             const datos = { token, productos, clientes, ventasDelDia, historialMensual };
             return fetch(url, {
@@ -526,12 +588,20 @@
             .then(res => res.json())
             .then(response => {
                 if(response.status === "success") {
-                    if (!silencioso) alert('¡Datos sincronizados con éxito en Google Sheets!');
+                    mostrarEstado("¡Datos subidos con éxito! ✓", false);
+                    ocultarEstado(2000);
+                    if (!silencioso && !document.getElementById('status-message').classList.contains('status-visible')) {
+                        // Opcional si se requiere alerta extra
+                    }
                 } else {
+                    mostrarEstado("Error: " + (response.message || 'Token incorrecto'), false);
+                    ocultarEstado(3000);
                     if (!silencioso) alert('Error: ' + (response.message || 'Token incorrecto'));
                 }
             })
             .catch(err => {
+                mostrarEstado("Error de conexión con Apps Script", false);
+                ocultarEstado(3000);
                 if (!silencioso) alert('Error de conexión con Apps Script: ' + err);
             });
         }
@@ -542,15 +612,21 @@
             if (!url) return;
             
             guardarCredencialesNube();
+            mostrarEstado("Sincronizando desde la nube...");
 
             fetch(`${url}?token=${encodeURIComponent(token)}`)
             .then(res => res.json())
             .then(data => {
                 if (data.status === "error") {
+                    mostrarEstado("Error de seguridad: " + data.message, false);
+                    ocultarEstado(3000);
                     if (!silencioso) alert('Error de seguridad: ' + data.message);
                     return;
                 }
-                if (!data || Object.keys(data).length === 0) return;
+                if (!data || Object.keys(data).length === 0) {
+                    ocultarEstado(1000);
+                    return;
+                }
                 
                 productos = data.productos || {};
                 clientes = data.clientes || {};
@@ -568,9 +644,14 @@
                 actualizarSelectClientes();
                 actualizarVistaCorte();
                 actualizarVistaBalance();
+
+                mostrarEstado("¡Sincronizado correctamente! ✓", false);
+                ocultarEstado(2000);
                 if (!silencioso) alert('🔄 ¡Datos descargados y actualizados desde la nube!');
             })
             .catch(err => {
+                mostrarEstado("Error al descargar datos", false);
+                ocultarEstado(3000);
                 if (!silencioso) alert('Error al descargar: ' + err);
             });
         }
@@ -586,7 +667,7 @@
             actualizarTablaClientes();
             actualizarSelectClientes();
             e.target.reset();
-            subirALaNube(true); // Sincronización automática silenciosa
+            subirALaNube(true);
         });
 
         function eliminarCliente(nombre) {
@@ -666,7 +747,7 @@
             actualizarListaSugerencias();
             form.reset();
             document.getElementById('contenedor-preview-imagen').innerHTML = '';
-            subirALaNube(true); // Sincronización automática silenciosa
+            subirALaNube(true);
         }
 
         function eliminarProducto(codigo) {
@@ -692,7 +773,7 @@
             p.stock = nuevoStock;
             guardarEnDB('productos', productos);
             actualizarTablaProductos();
-            subirALaNube(true); // Sincronización automática silenciosa
+            subirALaNube(true);
         }
 
         function actualizarTablaProductos() {
@@ -899,7 +980,7 @@
             actualizarVistaBalance();
 
             document.getElementById('btn-imprimir-ultimo').disabled = false;
-            subirALaNube(true); // Sincronización automática silenciosa al terminar la venta
+            subirALaNube(true);
             alert('¡Venta completada y sincronizada con éxito!');
         }
 
@@ -939,7 +1020,7 @@
                 actualizarTablaProductos();
                 actualizarVistaCorte();
                 actualizarVistaBalance();
-                subirALaNube(true); // Sincronización automática silenciosa
+                subirALaNube(true);
                 alert('Venta eliminada y stock devuelto.');
             }
         }
@@ -1020,7 +1101,7 @@
 
                 actualizarVistaCorte();
                 actualizarVistaBalance();
-                subirALaNube(true); // Sincronización automática silenciosa
+                subirALaNube(true);
                 alert('Caja cerrada y respaldada.');
             }
         }

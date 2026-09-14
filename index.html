@@ -638,7 +638,7 @@
                 <div class="card">
                     <h2>Configuración de Conexión Automática</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Funciona sin internet. Si configuras esto, intentará sincronizar cuando detecte red.
+                        Funciona sin internet en modo local. Al configurar tu Web App de Google Apps Script, podrás sincronizar y enlazar varios dispositivos a la misma base de datos en la nube.
                     </p>
 
                     <label>URL de Google Apps Script:</label>
@@ -648,6 +648,7 @@
                     <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123">
 
                     <button type="button" class="btn-info" onclick="guardarCredencialesNube()" style="margin-top: 10px;">Guardar Configuración y Probar</button>
+                    <button type="button" class="btn-warning" onclick="sincronizarConNube()" style="margin-top: 5px;">🔄 Sincronizar / Descargar de la Nube</button>
                 </div>
             </div>
 
@@ -791,6 +792,7 @@
                     actualizarListaSugerencias();
                     document.getElementById('form-producto').reset();
                     alert('Producto guardado correctamente.');
+                    sincronizarAutomaticoNube();
                 });
             };
 
@@ -865,6 +867,7 @@
             guardarEnDB('productos', productos, () => {
                 actualizarTablaProductos();
                 alert(`Stock actualizado exitosamente a: ${p.stock}`);
+                sincronizarAutomaticoNube();
             });
         }
 
@@ -877,6 +880,7 @@
                         guardarEnDB('productos', productos, () => {
                             actualizarTablaProductos();
                             alert('Imagen actualizada correctamente para el producto.');
+                            sincronizarAutomaticoNube();
                         });
                     }
                 };
@@ -890,6 +894,7 @@
                 guardarEnDB('productos', productos, () => {
                     actualizarTablaProductos();
                     actualizarListaSugerencias();
+                    sincronizarAutomaticoNube();
                 });
             }
         }
@@ -917,6 +922,7 @@
                 actualizarSelectClientes();
                 document.getElementById('form-cliente').reset();
                 alert('Cliente guardado.');
+                sincronizarAutomaticoNube();
             });
         }
 
@@ -948,6 +954,7 @@
             guardarEnDB('clientes', clientes, () => {
                 actualizarTablaClientes();
                 actualizarSelectClientes();
+                sincronizarAutomaticoNube();
             });
         }
 
@@ -1111,6 +1118,7 @@
                     document.getElementById('monto-pagado').value = '';
                     document.getElementById('btn-imprimir-ultimo').disabled = false;
                     alert('¡Venta completada con éxito!');
+                    sincronizarAutomaticoNube();
                 });
             });
         }
@@ -1211,6 +1219,7 @@
                         actualizarVistaCorte();
                         actualizarVistaBalance();
                         actualizarTablaTicketsVentasDia();
+                        sincronizarAutomaticoNube();
                     });
                 });
             }
@@ -1279,6 +1288,7 @@
                         actualizarTablaTicketsVentasDia();
                         inicializarFiltroMes();
                         alert('Caja cerrada y corte guardado con éxito.');
+                        sincronizarAutomaticoNube();
                     });
                 });
             }
@@ -1326,12 +1336,86 @@
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
             
-            // Se guardan de manera independiente en la base de datos local
             guardarEnDB('nubeUrl', url, () => {
                 guardarEnDB('nubeToken', token, () => {
                     alert('Configuración de la nube guardada correctamente.');
+                    sincronizarConNube();
                 });
             });
+        }
+
+        function sincronizarAutomaticoNube() {
+            const url = document.getElementById('nube-database-url').value.trim();
+            if (!url) return;
+            
+            const token = document.getElementById('nube-token').value.trim();
+            const payload = {
+                token: token,
+                productos: productos,
+                clientes: clientes,
+                ventasDelDia: ventasDelDia,
+                historialMensual: historialMensual
+            };
+
+            const indicator = document.getElementById('sync-status');
+            indicator.innerText = "⏳ Sincronizando con la nube...";
+
+            fetch(url, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                indicator.innerText = "🟢 Sincronizado con la Nube";
+            }).catch(() => {
+                indicator.innerText = "🟡 Modo Offline (Sin conexión)";
+            });
+        }
+
+        function sincronizarConNube() {
+            const url = document.getElementById('nube-database-url').value.trim();
+            const token = document.getElementById('nube-token').value.trim();
+
+            if (!url) return alert('Configura primero la URL de Google Apps Script.');
+
+            const indicator = document.getElementById('sync-status');
+            indicator.innerText = "⏳ Consultando base de datos en la nube...";
+
+            fetch(url + "?token=" + encodeURIComponent(token))
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success) {
+                        if (data.productos) productos = data.productos;
+                        if (data.clientes) clientes = data.clientes;
+                        if (data.ventasDelDia) ventasDelDia = data.ventasDelDia;
+                        if (data.historialMensual) historialMensual = data.historialMensual;
+
+                        guardarEnDB('productos', productos, () => {});
+                        guardarEnDB('clientes', clientes, () => {});
+                        guardarEnDB('ventasDelDia', ventasDelDia, () => {});
+                        guardarEnDB('historialMensual', historialMensual, () => {});
+
+                        actualizarTablaProductos();
+                        actualizarListaSugerencias();
+                        actualizarTablaClientes();
+                        actualizarSelectClientes();
+                        actualizarVistaCorte();
+                        actualizarVistaBalance();
+                        actualizarTablaTicketsVentasDia();
+                        inicializarFiltroMes();
+
+                        indicator.innerText = "🟢 Conectado y Sincronizado";
+                        alert('¡Datos sincronizados correctamente desde Google Drive/Sheets!');
+                    } else {
+                        alert('Error en la respuesta de la nube: ' + (data.error || 'Token inválido o estructura incorrecta'));
+                        indicator.innerText = "🔴 Error de Sincronización";
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('No se pudo conectar con el script. Verifica la URL o tu conexión a internet.');
+                    indicator.innerText = "🟡 Modo Local Activo";
+                });
         }
     </script>
 </body>

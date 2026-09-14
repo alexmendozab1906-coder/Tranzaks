@@ -1325,9 +1325,11 @@
         function guardarCredencialesNube() {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
+            
+            // Se guardan de manera independiente en la base de datos local
             guardarEnDB('nubeUrl', url, () => {
                 guardarEnDB('nubeToken', token, () => {
-                    alert('Configuración guardada correctamente.');
+                    alert('Configuración de la nube guardada correctamente.');
                 });
             });
         }

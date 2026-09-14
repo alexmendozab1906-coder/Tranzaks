@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Punto de Venta Híbrido (Online/Offline)</title>
-    <!-- Librería jsPDF por si se requiere respaldo -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* PANTALLA DE BIENVENIDA (SPLASH SCREEN) CON ESTILO DE OSO AMIGABLE */
         #splash-screen {
             position: fixed;
             top: 0;
@@ -27,7 +25,6 @@
             visibility: hidden;
         }
 
-        /* DISEÑO Y ANIMACIÓN DEL OSO ESTILO ILUSTRACIÓN */
         .bear-container {
             position: relative;
             width: 160px;
@@ -35,7 +32,6 @@
             margin-bottom: 25px;
         }
 
-        /* CUERPO Y PANZA */
         .bear-body {
             position: absolute;
             bottom: 0;
@@ -56,7 +52,6 @@
             border-radius: 50%;
         }
 
-        /* CABEZAS Y OREJAS */
         .bear-head {
             position: absolute;
             top: 15px;
@@ -88,7 +83,6 @@
             border-radius: 50%;
         }
 
-        /* ROSTRO: HOCICO, OJOS Y SONRISA */
         .bear-snout {
             position: absolute;
             bottom: 12px;
@@ -127,7 +121,6 @@
         .bear-eye.left { left: 26px; }
         .bear-eye.right { right: 26px; }
 
-        /* PATITA IZQUIERDA (QUIETA) */
         .bear-paw-left {
             position: absolute;
             bottom: 25px;
@@ -139,7 +132,6 @@
             transform: rotate(-15deg);
         }
 
-        /* PATITA DERECHA SALUDANDO */
         @keyframes wavePivot {
             0%   { transform: rotate(0deg); }
             50%  { transform: rotate(-75deg); }
@@ -192,7 +184,6 @@
             animation: fadeInApp 0.4s ease-out forwards;
         }
         
-        /* BOTÓN FLOTANTE SUPERIOR IZQUIERDO CLÁSICO */
         .floating-menu-btn {
             position: fixed;
             top: 10px;
@@ -302,7 +293,7 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            max-width: 800px;
+            max-width: 850px;
             margin: 0 auto;
         }
         h2 { font-size: 1.2rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; margin-top: 0; }
@@ -339,17 +330,16 @@
         .btn-warning { background-color: #d97706; color: white; }
         .btn-warning:hover { background-color: #b45309; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
         th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: middle; }
         th { background-color: #f8fafc; color: #475569; }
         .monto-total { font-size: 1.5rem; color: #2c3e50; font-weight: bold; text-align: right; margin: 10px 0; }
         .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
         .corte-resumen p { margin: 6px 0; font-size: 1rem; }
-        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; display: block; margin-bottom: 2px; }
+        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; display: block; margin-bottom: 2px; }
         .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
         .sync-indicator { font-size: 0.8rem; color: #27ae60; font-weight: bold; text-align: right; margin-bottom: 5px; }
 
-        /* MODAL DE VISUALIZACIÓN DE TICKET */
         #modal-ticket {
             display: none;
             position: fixed;
@@ -382,7 +372,6 @@
             .sidebar.open { transform: translateX(0); }
         }
 
-        /* ESTILOS EXCLUSIVOS PARA IMPRESIÓN DE TICKETS TÉRMICOS */
         #print-ticket-container { display: none; }
         @media print {
             body * { visibility: hidden; }
@@ -404,10 +393,8 @@
 </head>
 <body>
 
-    <!-- BOTÓN CLÁSICO FLOTANTE SUPERIOR IZQUIERDO PARA MENÚ -->
     <button class="floating-menu-btn" onclick="toggleSidebar()" title="Menú">☰</button>
 
-    <!-- PANTALLA DE CARGA CON EL OSO TIERNO SALUDANDO -->
     <div id="splash-screen">
         <div class="bear-container">
             <div class="bear-body">
@@ -431,7 +418,6 @@
         <div class="splash-text">¡Hola! Preparando tu sistema...</div>
     </div>
 
-    <!-- MODAL PARA VISUALIZAR TICKET -->
     <div id="modal-ticket">
         <div class="ticket-modal-content">
             <div id="ticket-visual-body"></div>
@@ -476,10 +462,10 @@
                         <button type="submit" class="btn-info">Agregar Producto</button>
                     </form>
 
-                    <div style="max-height: 200px; overflow-y: auto; margin-top:10px;">
+                    <div style="max-height: 240px; overflow-y: auto; margin-top:10px;">
                         <table id="tabla-carrito">
                             <thead>
-                                <tr><th>Producto</th><th>Cant.</th><th>Precio U.</th><th>Subtotal</th><th>Acción</th></tr>
+                                <tr><th>Producto</th><th>Cant.</th><th>Precio Catálogo</th><th>Precio Venta</th><th>Subtotal</th><th>Acción</th></tr>
                             </thead>
                             <tbody></tbody>
                         </table>
@@ -679,11 +665,9 @@
         </div>
     </div>
 
-    <!-- CONTENEDOR OCULTO PARA IMPRESIÓN TÉRMICA -->
     <div id="print-ticket-container"></div>
 
     <script>
-        // QUITAR PANTALLA DE CARGA DEL OSO A LOS 2 SEGUNDOS EXACTOS
         window.addEventListener('load', () => {
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
@@ -786,7 +770,6 @@
             }
         }
 
-        // FUNCIONALIDAD DE PRODUCTOS
         function guardarProducto(e) {
             e.preventDefault();
             const codigo = document.getElementById('prod-codigo').value.trim();
@@ -830,7 +813,7 @@
                     <td>
                         ${p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img'}
                         <input type="file" id="file-up-${codigo}" accept="image/*" style="display:none" onchange="subirImagenProductoExistente('${codigo}', this)">
-                        <button class="btn-warning" style="padding:2px 4px; font-size:0.65rem; width:100%;" onclick="document.getElementById('file-up-${codigo}').click()">Cambiar</button>
+                        <button class="btn-warning" style="padding:2px 4px; font-size:0.65rem; width:100%; margin-top:2px;" onclick="document.getElementById('file-up-${codigo}').click()">Img</button>
                     </td>
                     <td>${p.codigo}</td>
                     <td>${p.nombre}</td>
@@ -884,7 +867,6 @@
             }
         }
 
-        // FUNCIONALIDAD DE CLIENTES
         function guardarCliente(e) {
             e.preventDefault();
             const nombre = document.getElementById('cli-nombre').value.trim();
@@ -930,7 +912,6 @@
             });
         }
 
-        // FUNCIONALIDAD DE VENTAS Y CARRITO
         function agregarAlCarrito(e) {
             e.preventDefault();
             const input = document.getElementById('venta-busqueda');
@@ -953,12 +934,13 @@
             if (index > -1) {
                 if (carrito[index].cantidad + 1 > productoEncontrado.stock) return alert('Stock insuficiente.');
                 carrito[index].cantidad += 1;
-                carrito[index].subtotal = carrito[index].cantidad * carrito[index].precio;
+                carrito[index].subtotal = carrito[index].cantidad * carrito[index].precioVenta;
             } else {
                 carrito.push({
                     codigo: productoEncontrado.codigo,
                     nombre: productoEncontrado.nombre,
-                    precio: productoEncontrado.precio,
+                    precioCatalogo: productoEncontrado.precio,
+                    precioVenta: productoEncontrado.precio, // Inicia con el precio original de catálogo
                     costo: productoEncontrado.costo,
                     cantidad: 1,
                     subtotal: productoEncontrado.precio
@@ -980,7 +962,10 @@
                 tr.innerHTML = `
                     <td>${item.nombre}</td>
                     <td>${item.cantidad}</td>
-                    <td>$${item.precio.toFixed(2)} <button class="btn-warning" style="padding:1px 4px; font-size:0.7rem; margin-left:4px;" onclick="solicitarCambioPrecio(${index})">✎</button></td>
+                    <td>$${item.precioCatalogo.toFixed(2)}</td>
+                    <td>
+                        <input type="number" step="0.01" value="${item.precioVenta.toFixed(2)}" style="width: 90px; padding: 4px; margin: 0;" onchange="actualizarPrecioVentaItem(${index}, this.value)">
+                    </td>
                     <td>$${item.subtotal.toFixed(2)}</td>
                     <td><button class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="quitarItemCarrito(${index})">X</button></td>
                 `;
@@ -991,31 +976,33 @@
             calcularCambio();
         }
 
-        function solicitarCambioPrecio(index) {
-            if (!nipSeguridad) {
-                return alert('No hay un NIP configurado. Por favor ve a la sección "Seguridad" para crear un NIP antes de modificar precios.');
-            }
-
-            const nipIngresado = prompt('Introduce el NIP de seguridad para cambiar el precio:');
-            if (nipIngresado === null) return;
-
-            if (nipIngresado !== nipSeguridad) {
-                return alert('NIP incorrecto. No se puede modificar el precio.');
-            }
-
-            const nuevoPrecioStr = prompt(`Ingresa el nuevo precio unitario para "${carrito[index].nombre}":`, carrito[index].precio);
-            if (nuevoPrecioStr === null) return;
-
-            const nuevoPrecio = parseFloat(nuevoPrecioStr);
+        function actualizarPrecioVentaItem(index, nuevoValorStr) {
+            const nuevoPrecio = parseFloat(nuevoValorStr);
             if (isNaN(nuevoPrecio) || nuevoPrecio < 0) {
-                return alert('Precio inválido.');
+                alert('Precio inválido.');
+                renderizarCarrito();
+                return;
             }
 
-            // Permite aplicar cualquier precio (incluso menor al de catálogo) de forma válida
-            carrito[index].precio = nuevoPrecio;
+            // Si el precio es menor al original de catálogo, requerimos NIP de seguridad
+            if (nuevoPrecio < carrito[index].precioCatalogo) {
+                if (!nipSeguridad) {
+                    alert('No hay un NIP configurado. Para vender a menor precio, configura primero un NIP en la sección "Seguridad".');
+                    renderizarCarrito();
+                    return;
+                }
+
+                const nipIngresado = prompt('El precio ingresado es menor al de catálogo. Introduce el NIP de seguridad para autorizarlo:');
+                if (nipIngresado === null || nipIngresado !== nipSeguridad) {
+                    alert('NIP incorrecto o cancelado. Se restaurará el precio anterior.');
+                    renderizarCarrito();
+                    return;
+                }
+            }
+
+            carrito[index].precioVenta = nuevoPrecio;
             carrito[index].subtotal = carrito[index].cantidad * nuevoPrecio;
             renderizarCarrito();
-            alert('¡Precio actualizado correctamente para esta venta!');
         }
 
         function quitarItemCarrito(index) {
@@ -1049,12 +1036,21 @@
                 if (pagado < total) return alert('El monto pagado es menor al total.');
             }
 
-            // Descontar stock
             carrito.forEach(item => {
                 if (productos[item.codigo]) {
                     productos[item.codigo].stock -= item.cantidad;
                 }
             });
+
+            // Mapeamos los elementos para guardar el precio final cobrado de forma correcta
+            const itemsVenta = carrito.map(item => ({
+                codigo: item.codigo,
+                nombre: item.nombre,
+                precio: item.precioVenta, // Guarda el precio de venta real aplicado
+                costo: item.costo,
+                cantidad: item.cantidad,
+                subtotal: item.subtotal
+            }));
 
             const ventaData = {
                 id: Date.now(),
@@ -1062,7 +1058,7 @@
                 hora: new Date().toLocaleTimeString(),
                 cliente,
                 metodoPago,
-                items: [...carrito],
+                items: itemsVenta,
                 total,
                 costo: costoTotal,
                 ganancia: total - costoTotal
@@ -1144,7 +1140,6 @@
             window.print();
         }
 
-        // BALANCE Y CORTE
         function actualizarVistaCorte() {
             let ingresos = 0, costos = 0;
             ventasDelDia.forEach(v => {
@@ -1256,7 +1251,6 @@
             }
         }
 
-        // HISTORIAL MENSUAL
         function inicializarFiltroMes() {
             const select = document.getElementById('select-mes-filtro');
             select.innerHTML = '';
@@ -1295,7 +1289,6 @@
             document.getElementById('mes-total-ganancias').innerText = totalGanancias.toFixed(2);
         }
 
-        // CONFIGURACIÓN NUBE
         function guardarCredencialesNube() {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();

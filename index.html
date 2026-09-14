@@ -3,899 +3,843 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta Híbrido (Online/Offline)</title>
-    <!-- Librería jsPDF por si se requiere respaldo -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <title>Tranzaks POS - Sistema Híbrido de Ventas</title>
     <style>
-        /* PANTALLA DE BIENVENIDA (SPLASH SCREEN) CON ESTILO DE OSO AMIGABLE */
-        #splash-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #f8fafc;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.6s ease, visibility 0.6s ease;
-        }
-        #splash-screen.fade-out {
-            opacity: 0;
-            visibility: hidden;
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --light-bg: #f8f9fa;
+            --border-color: #dee2e6;
         }
 
-        /* DISEÑO Y ANIMACIÓN DEL OSO ESTILO ILUSTRACIÓN */
-        .bear-container {
-            position: relative;
-            width: 160px;
-            height: 180px;
-            margin-bottom: 25px;
-        }
-
-        /* CUERPO Y PANZA */
-        .bear-body {
-            position: absolute;
-            bottom: 0;
-            left: 25px;
-            width: 110px;
-            height: 110px;
-            background: #d97706; /* Tono café tierno y cálido */
-            border-radius: 50% 50% 45% 45%;
-            box-shadow: inset -8px -8px 0px rgba(0,0,0,0.08);
-        }
-        .bear-belly {
-            position: absolute;
-            bottom: 8px;
-            left: 20px;
-            width: 70px;
-            height: 75px;
-            background: #fef3c7; /* Panza cremosa */
-            border-radius: 50%;
-        }
-
-        /* CABEZAS Y OREJAS */
-        .bear-head {
-            position: absolute;
-            top: 15px;
-            left: 30px;
-            width: 100px;
-            height: 85px;
-            background: #d97706;
-            border-radius: 45% 45% 42% 42%;
-            box-shadow: inset -5px -5px 0px rgba(0,0,0,0.06);
-        }
-        .bear-ear {
-            position: absolute;
-            top: 5px;
-            width: 32px;
-            height: 32px;
-            background: #b45309;
-            border-radius: 50%;
-        }
-        .bear-ear.left { left: 8px; }
-        .bear-ear.right { right: 8px; }
-        
-        .bear-ear-inner {
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            width: 20px;
-            height: 20px;
-            background: #fef3c7;
-            border-radius: 50%;
-        }
-
-        /* ROSTRO: HOCICO, OJOS Y SONRISA */
-        .bear-snout {
-            position: absolute;
-            bottom: 12px;
-            left: 28px;
-            width: 44px;
-            height: 32px;
-            background: #fef3c7;
-            border-radius: 50%;
-        }
-        .bear-nose {
-            position: absolute;
-            top: 6px;
-            left: 14px;
-            width: 16px;
-            height: 11px;
-            background: #291808;
-            border-radius: 50% 50% 60% 60%;
-        }
-        .bear-smile {
-            position: absolute;
-            top: 18px;
-            left: 16px;
-            width: 12px;
-            height: 6px;
-            border-bottom: 3px solid #291808;
-            border-radius: 0 0 50% 50%;
-        }
-        .bear-eye {
-            position: absolute;
-            top: 26px;
-            width: 8px;
-            height: 9px;
-            background: #291808;
-            border-radius: 50%;
-        }
-        .bear-eye.left { left: 26px; }
-        .bear-eye.right { right: 26px; }
-
-        /* PATITA IZQUIERDA (QUIETA) */
-        .bear-paw-left {
-            position: absolute;
-            bottom: 25px;
-            left: 12px;
-            width: 28px;
-            height: 40px;
-            background: #d97706;
-            border-radius: 50%;
-            transform: rotate(-15deg);
-        }
-
-        /* PATITA DERECHA SALUDANDO */
-        @keyframes wavePivot {
-            0%   { transform: rotate(0deg); }
-            50%  { transform: rotate(-75deg); }
-            100% { transform: rotate(0deg); }
-        }
-        .bear-paw-right {
-            position: absolute;
-            top: 85px;
-            left: 22px;
-            width: 30px;
-            height: 44px;
-            background: #d97706;
-            border-radius: 50% 50% 50% 50%;
-            transform-origin: top center;
-            animation: wavePivot 1.5s ease-in-out infinite;
-            z-index: 2;
-        }
-        .paw-pads {
-            position: absolute;
-            bottom: 4px;
-            left: 5px;
-            width: 20px;
-            height: 16px;
-            background: #fef3c7;
-            border-radius: 50%;
-        }
-
-        .splash-text {
-            color: #334155;
-            font-family: Arial, sans-serif;
-            font-size: 1.15rem;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-        }
-
-        @keyframes fadeInApp {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: #f1f5f9;
+            background-color: var(--light-bg);
             color: #333;
             display: flex;
+            flex-direction: column;
             height: 100vh;
             overflow: hidden;
-            animation: fadeInApp 0.4s ease-out forwards;
         }
-        
-        .sidebar {
-            width: 180px;
-            background-color: #1e293b;
+
+        header {
+            background-color: var(--primary-color);
             color: white;
+            padding: 10px 20px;
             display: flex;
-            flex-direction: column;
-            transition: transform 0.3s ease, margin-left 0.3s ease;
-            z-index: 1000;
-            flex-shrink: 0;
-            position: relative;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        .sidebar.collapsed {
-            transform: translateX(-100%);
-            margin-left: -180px;
+
+        header h1 {
+            font-size: 1.5rem;
         }
-        .sidebar-header {
-            padding: 15px 10px;
-            font-size: 1rem;
-            font-weight: bold;
-            background-color: #0f172a;
-            text-align: center;
-            border-bottom: 1px solid #334155;
-        }
-        .sidebar-menu {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            padding: 15px 8px;
-            overflow-y: auto;
-            flex-grow: 1;
-        }
-        .tab-btn {
-            padding: 10px 12px;
-            background: transparent;
-            color: #94a3b8;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
+
+        #sync-status {
             font-size: 0.85rem;
-            cursor: pointer;
-            text-align: left;
-            transition: background 0.2s, color 0.2s, transform 0.1s;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
         }
-        .tab-btn:hover { background-color: #334155; color: white; }
-        .tab-btn.active { background-color: #2563eb; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .tab-btn:active { transform: scale(0.97); }
 
         .main-container {
-            flex-grow: 1;
             display: flex;
-            flex-direction: column;
-            height: 100vh;
+            flex: 1;
             overflow: hidden;
         }
-        .topbar {
-            background: white;
-            padding: 10px 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+
+        nav {
+            width: 220px;
+            background-color: white;
+            border-right: 1px solid var(--border-color);
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column;
         }
-        .menu-toggle {
-            background: #2563eb;
-            color: white;
+
+        .nav-btn {
+            padding: 12px 20px;
+            background: none;
             border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
+            text-align: left;
             font-size: 0.95rem;
-            font-weight: bold;
-            transition: background 0.2s, transform 0.1s;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.2s;
         }
-        .menu-toggle:hover { background: #1d4ed8; }
-        .menu-toggle:active { transform: scale(0.95); }
+
+        .nav-btn:hover, .nav-btn.active {
+            background-color: #f1f4f8;
+            border-left-color: var(--secondary-color);
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
 
         .content-area {
-            flex-grow: 1;
+            flex: 1;
             padding: 20px;
             overflow-y: auto;
-        }
-
-        .tab-content {
             display: none;
-            opacity: 0;
-            transform: translateY(8px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-        .tab-content.active {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
         }
 
+        .content-area.active {
+            display: block;
+        }
+
+        /* Utilidades Generales */
         .card {
-            background: #ffffff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            max-width: 800px;
-            margin: 0 auto;
-            transition: box-shadow 0.2s;
-        }
-        h2 { font-size: 1.2rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; margin-top: 0; }
-        input, select, button, textarea {
-            width: 100%;
-            padding: 10px;
-            margin: 6px 0;
-            border: 1px solid #ccc;
+            background: white;
+            border: 1px solid var(--border-color);
             border-radius: 6px;
-            font-size: 0.95rem;
-            box-sizing: border-box;
-            transition: border-color 0.2s;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-        input:focus, select:focus { border-color: #2563eb; outline: none; }
-        
+
+        h2 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--light-bg);
+            padding-bottom: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
         button {
-            background-color: #27ae60;
+            padding: 8px 15px;
+            background-color: var(--secondary-color);
             color: white;
             border: none;
-            font-weight: bold;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
-        button:hover { background-color: #219150; }
-        button:active { transform: scale(0.98); }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
-        
-        .btn-danger { background-color: #e74c3c; }
-        .btn-danger:hover { background-color: #c0392b; }
-        .btn-info { background-color: #2980b9; }
-        .btn-info:hover { background-color: #2471a3; }
-        .btn-secondary { background-color: #7f8c8d; }
-        .btn-secondary:hover { background-color: #6c757d; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
-        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: middle; }
-        th { background-color: #f8fafc; color: #475569; }
-        .monto-total { font-size: 1.5rem; color: #2c3e50; font-weight: bold; text-align: right; margin: 10px 0; }
-        .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
-        .corte-resumen p { margin: 6px 0; font-size: 1rem; }
-        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; }
-        .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
-        .sync-indicator { font-size: 0.8rem; color: #27ae60; font-weight: bold; text-align: right; margin-bottom: 5px; }
+        button:hover {
+            opacity: 0.9;
+        }
 
-        /* MODAL DE VISUALIZACIÓN DE TICKET */
-        #modal-ticket {
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-success { background-color: var(--success-color); }
+        .btn-warning { background-color: var(--warning-color); color: #000; }
+        .btn-info { background-color: var(--secondary-color); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--light-bg);
+            font-weight: 600;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .flex-col {
+            flex: 1;
+        }
+
+        /* Vista de Ventas (POS) Específico */
+        .pos-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            height: 100%;
+        }
+
+        .pos-left {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .pos-right {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ticket-container {
+            font-family: 'Courier New', Courier, monospace;
+            background: white;
+            padding: 15px;
+            border: 1px dashed #ccc;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .img-preview-table {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Modal Generales */
+        .modal {
             display: none;
             position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5);
-            z-index: 2000;
             justify-content: center;
             align-items: center;
+            z-index: 1000;
         }
-        .ticket-modal-content {
-            background: #fff;
+        .modal-content {
+            background: white;
             padding: 20px;
-            border-radius: 8px;
-            width: 320px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            color: #000;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                position: absolute;
-                height: 100%;
-                transform: translateX(-100%);
-                margin-left: 0 !important;
-            }
-            .sidebar.open { transform: translateX(0); }
-        }
-
-        /* ESTILOS EXCLUSIVOS PARA IMPRESIÓN DE TICKETS TÉRMICOS */
-        #print-ticket-container { display: none; }
-        @media print {
-            body * { visibility: hidden; }
-            #print-ticket-container, #print-ticket-container * { visibility: visible; }
-            #print-ticket-container {
-                display: block !important;
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 58mm;
-                font-family: 'Courier New', Courier, monospace;
-                font-size: 11px;
-                color: #000;
-                background: #fff;
-                padding: 5px;
-            }
+            border-radius: 6px;
+            width: 350px;
+            max-width: 90%;
         }
     </style>
 </head>
 <body>
 
-    <!-- PANTALLA DE CARGA CON EL OSO TIERNO SALUDANDO -->
-    <div id="splash-screen">
-        <div class="bear-container">
-            <div class="bear-body">
-                <div class="bear-belly"></div>
-            </div>
-            <div class="bear-paw-left"></div>
-            <div class="bear-ear left"><div class="bear-ear-inner"></div></div>
-            <div class="bear-ear right"><div class="bear-ear-inner"></div></div>
-            <div class="bear-head">
-                <div class="bear-eye left"></div>
-                <div class="bear-eye right"></div>
-                <div class="bear-snout">
-                    <div class="bear-nose"></div>
-                    <div class="bear-smile"></div>
-                </div>
-            </div>
-            <div class="bear-paw-right">
-                <div class="paw-pads"></div>
-            </div>
-        </div>
-        <div class="splash-text">¡Hola! Preparando tu sistema...</div>
-    </div>
-
-    <!-- MODAL PARA VISUALIZAR TICKET -->
-    <div id="modal-ticket">
-        <div class="ticket-modal-content">
-            <div id="ticket-visual-body"></div>
-            <button type="button" class="btn-secondary" onclick="cerrarModalTicket()" style="margin-top: 15px;">Volver</button>
-        </div>
-    </div>
-
-    <div class="sidebar collapsed" id="sidebar">
-        <div class="sidebar-header">📦 Menú Principal</div>
-        <div class="sidebar-menu">
-            <button type="button" class="tab-btn active" onclick="cambiarPestana('sec-ventas', this)">1. Ventas</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-clientes', this)">2. Clientes</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-balance', this)">3. Balance</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-productos', this)">4. Productos</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">5. Corte</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">6. Mes</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-nube', this)">⚙️ Config. Nube</button>
-            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-reiniciar', this)">🔒 Seguridad</button>
-        </div>
-    </div>
+    <header>
+        <h1>Tranzaks POS</h1>
+        <div id="sync-status">🟢 Inicializando sistema...</div>
+    </header>
 
     <div class="main-container">
-        <div class="topbar">
-            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Punto de Venta Híbrido</h1>
-            <button class="menu-toggle" onclick="toggleSidebar()">☰ Menú</button>
-        </div>
+        <nav>
+            <button class="nav-btn active" onclick="cambiarSeccion('sec-ventas', this)">🛒 Caja / Ventas</button>
+            <button class="nav-btn" onclick="cambiarSeccion('sec-productos', this)">📦 Productos</button>
+            <button class="nav-btn" onclick="cambiarSeccion('sec-clientes', this)">👥 Clientes</button>
+            <button class="nav-btn" onclick="cambiarSeccion('sec-corte', this)">📊 Corte de Caja</button>
+            <button class="nav-btn" onclick="cambiarSeccion('sec-balance', this)">📈 Balance General</button>
+            <button class="nav-btn" onclick="cambiarSeccion('sec-mensual', this)">📅 Historial Mensual</button>
+            <button class="nav-btn" onclick="cambiarSeccion('sec-config', this)">⚙️ Configuración</button>
+        </nav>
 
-        <div class="content-area">
-            <div id="sync-status" class="sync-indicator">🟢 Modo Local Activo</div>
-
-            <!-- SECCIÓN 1: VENTAS -->
-            <div id="sec-ventas" class="tab-content active" style="display: block;">
-                <div class="card">
-                    <h2>Registro de Venta</h2>
-                    <label>Cliente:</label>
-                    <select id="venta-cliente">
-                        <option value="Público General">Público General</option>
-                    </select>
-
-                    <form id="form-venta" style="margin-top: 10px;">
-                        <input type="text" id="venta-busqueda" list="lista-sugerencias-productos" placeholder="Nombre o código del producto" required autocomplete="off">
-                        <datalist id="lista-sugerencias-productos"></datalist>
-                        <button type="submit" class="btn-info">Agregar Producto</button>
-                    </form>
-
-                    <div style="max-height: 200px; overflow-y: auto; margin-top:10px;">
+        <!-- SECCIÓN VENTAS -->
+        <div id="sec-ventas" class="content-area active">
+            <div class="pos-grid">
+                <div class="pos-left">
+                    <div class="card" style="margin-bottom:0;">
+                        <form id="form-venta">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>Buscar Producto (Código o Nombre):</label>
+                                <input type="text" id="venta-busqueda" placeholder="Escanea el código o escribe el nombre..." list="lista-sugerencias-productos" autocomplete="off" autofocus>
+                                <datalist id="lista-sugerencias-productos"></datalist>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card" style="flex:1; overflow-y:auto; margin-bottom:0;">
                         <table id="tabla-carrito">
                             <thead>
-                                <tr><th>Producto</th><th>Cant.</th><th>Precio U.</th><th>Subtotal</th><th>Acción</th></tr>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cant</th>
+                                    <th>Precio</th>
+                                    <th>Subtotal</th>
+                                    <th>Acción</th>
+                                </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
                     </div>
-
-                    <div class="monto-total">Total: $<span id="total-venta">0.00</span></div>
-
-                    <label>Forma de Pago:</label>
-                    <select id="metodo-pago" onchange="cambiarMetodoPago()">
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Transferencia">Transferencia</option>
-                        <option value="Tarjeta">Tarjeta</option>
-                    </select>
-
-                    <div id="contenedor-efectivo">
-                        <input type="number" step="0.01" id="monto-pagado" placeholder="Monto Recibido ($)" oninput="calcularCambio()">
-                        <p style="margin: 5px 0;"><strong>Cambio:</strong> $<span id="monto-cambio">0.00</span></p>
-                    </div>
-
-                    <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta</button>
-                    <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="imprimirUltimoTicket()" disabled style="margin-top: 5px;">Imprimir Último Ticket</button>
-
-                    <!-- APARTADO PARA VISUALIZAR EL TICKET DE CADA VENTA DEL DÍA -->
-                    <h3 style="margin-top: 25px; font-size: 1rem;">Tickets de Ventas Realizadas Hoy</h3>
-                    <div style="max-height: 220px; overflow-y: auto;">
-                        <table id="tabla-ventas-dia-tickets">
+                    <div class="card" style="margin-bottom:0;">
+                        <h3>Ventas Registradas Hoy</h3>
+                        <table id="tabla-ventas-dia-tickets" style="max-height: 150px; display: block; overflow-y: auto;">
                             <thead>
-                                <tr><th>Hora / Cliente</th><th>Total</th><th>Visualizar Ticket</th></tr>
+                                <tr>
+                                    <th>Hora / Cliente</th>
+                                    <th>Total</th>
+                                    <th>Ticket</th>
+                                </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
                     </div>
                 </div>
-            </div>
 
-            <!-- SECCIÓN 2: CLIENTES -->
-            <div id="sec-clientes" class="tab-content">
-                <div class="card">
-                    <h2>Catálogo de Clientes</h2>
-                    <form id="form-cliente">
-                        <input type="text" id="cli-nombre" placeholder="Nombre completo o razón social" required>
-                        <input type="text" id="cli-telefono" placeholder="Número telefónico" required>
-                        <button type="submit">Guardar Cliente</button>
-                    </form>
-
-                    <h3 style="margin-top:20px; font-size: 1rem;">Lista de Clientes</h3>
-                    <div style="max-height: 250px; overflow-y: auto;">
-                        <table id="tabla-clientes">
-                            <thead>
-                                <tr><th>Nombre</th><th>Teléfono</th><th>Acción</th></tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                <div class="pos-right">
+                    <h2>Resumen de Venta</h2>
+                    <div class="form-group">
+                        <label>Cliente:</label>
+                        <select id="venta-cliente">
+                            <option value="Público General">Público General</option>
+                        </select>
                     </div>
-                </div>
-            </div>
-
-            <!-- SECCIÓN 3: BALANCE -->
-            <div id="sec-balance" class="tab-content">
-                <div class="card">
-                    <h2>Balance General del Día</h2>
-                    <div class="corte-resumen">
-                        <p><strong>Total Ingresos del Día:</strong> $<span id="balance-ingresos">0.00</span></p>
-                        <p><strong>Total Costo de Producto:</strong> $<span id="balance-egresos">0.00</span></p>
-                        <hr>
-                        <p style="color: #27ae60; font-size: 1.2rem;"><strong>Ganancia Neta Actual:</strong> $<span id="balance-ganancia">0.00</span></p>
+                    <div class="form-group">
+                        <label>Método de Pago:</label>
+                        <select id="metodo-pago" onchange="cambiarMetodoPago()">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Tarjeta">Tarjeta</option>
+                            <option value="Transferencia">Transferencia</option>
+                        </select>
                     </div>
-
-                    <h3 style="font-size: 1rem; margin-top: 15px;">Desglose por Producto Vendido Hoy</h3>
-                    <div style="max-height: 220px; overflow-y: auto;">
-                        <table id="tabla-balance-productos">
-                            <thead>
-                                <tr><th>Producto</th><th>Cant.</th><th>Ingreso</th><th>Costo</th><th>Ganancia</th></tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                    <div class="form-group" id="contenedor-efectivo">
+                        <label>Monto Pagado ($):</label>
+                        <input type="number" id="monto-pagado" step="0.01" oninput="calcularCambio()">
+                        <label style="margin-top: 8px;">Cambio: $<span id="monto-cambio" style="font-size: 1.1rem; color: var(--success-color);">0.00</span></label>
                     </div>
-                </div>
-            </div>
-
-            <!-- SECCIÓN 4: PRODUCTOS -->
-            <div id="sec-productos" class="tab-content">
-                <div class="card">
-                    <h2>Registro de Productos</h2>
-                    <form id="form-producto">
-                        <input type="text" id="prod-codigo" placeholder="Código de barras / ID" required>
-                        <input type="text" id="prod-nombre" placeholder="Nombre del producto" required>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="number" step="0.01" id="prod-costo" placeholder="Costo ($)" required>
-                            <input type="number" step="0.01" id="prod-precio" placeholder="Precio ($)" required>
+                    <div style="margin-top: auto;">
+                        <hr style="margin: 15px 0; border:0; border-top: 1px solid var(--border-color);">
+                        <div style="font-size: 1.3rem; font-weight: bold; margin-bottom: 15px; text-align: right;">
+                            TOTAL: $<span id="total-venta">0.00</span>
                         </div>
-                        <input type="number" id="prod-stock" placeholder="Stock inicial" required>
-                        
-                        <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto:</label>
-                        <input type="file" id="prod-imagen" accept="image/*">
-
-                        <button type="submit">Guardar Producto</button>
-                    </form>
-
-                    <div class="inversion-box">
-                        💰 Inversión Total en Inventario: $<span id="inversion-total-inventario">0.00</span>
+                        <button type="button" class="btn-success" style="width: 100%; padding: 12px; font-size: 1.05rem; margin-bottom: 8px;" onclick="procesarVenta()">Completar Venta</button>
+                        <button type="button" id="btn-imprimir-ultimo" class="btn-info" style="width: 100%;" onclick="imprimirUltimoTicket()" disabled>🖨️ Reimprimir Último Ticket</button>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <h3 style="margin-top:20px; font-size: 1rem;">Inventario Actual</h3>
-                    <div style="max-height: 250px; overflow-y: auto;">
+        <!-- SECCIÓN PRODUCTOS -->
+        <div id="sec-productos" class="content-area">
+            <div class="flex-row">
+                <div class="card" style="width: 350px;">
+                    <h2>Registrar / Editar Producto</h2>
+                    <form id="form-producto">
+                        <div class="form-group">
+                            <label>Código de Barras:</label>
+                            <input type="text" id="prod-codigo" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nombre del Producto:</label>
+                            <input type="text" id="prod-nombre" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Costo Unitario ($):</label>
+                            <input type="number" id="prod-costo" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Precio de Venta ($):</label>
+                            <input type="number" id="prod-precio" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Stock Inicial:</label>
+                            <input type="number" id="prod-stock" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Imagen del Producto (Opcional):</label>
+                            <input type="file" id="prod-imagen" accept="image/*">
+                        </div>
+                        <button type="submit" style="width: 100%;">Guardar Producto</button>
+                    </form>
+                </div>
+                <div class="card flex-col">
+                    <h2>Inventario Actual (Inversión Total en Stock: $<span id="inversion-total-inventario">0.00</span>)</h2>
+                    <div style="max-height: 500px; overflow-y: auto;">
                         <table id="tabla-productos">
                             <thead>
-                                <tr><th>Img</th><th>Código</th><th>Prod.</th><th>Costo</th><th>Precio</th><th>Stock</th><th>Acción</th></tr>
+                                <tr>
+                                    <th>Img</th>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Costo</th>
+                                    <th>Precio</th>
+                                    <th>Stock</th>
+                                    <th>Acción</th>
+                                </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- SECCIÓN 5: CORTE -->
-            <div id="sec-corte" class="tab-content">
-                <div class="card">
-                    <h2>Corte de Caja del Día</h2>
-                    <div class="corte-resumen">
-                        <p><strong>Ventas Realizadas Hoy:</strong> <span id="cant-ventas">0</span></p>
-                        <p><strong>Ingresos Brutos:</strong> $<span id="total-ingresos">0.00</span></p>
-                        <p><strong>Costo Mercancía:</strong> $<span id="total-costos">0.00</span></p>
-                        <hr>
-                        <p style="color: #27ae60; font-size: 1.2rem;"><strong>Ganancia Neta:</strong> $<span id="total-ganancia">0.00</span></p>
-                    </div>
-
-                    <h3 style="font-size: 1rem;">Detalle de Ventas</h3>
-                    <div style="max-height: 180px; overflow-y: auto;">
-                        <table id="tabla-historial">
-                            <thead>
-                                <tr><th>Fecha/Cliente</th><th>Total</th><th>Pago</th><th>Acción</th></tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                    <br>
-                    <button type="button" class="btn-danger" onclick="reiniciarDia()">Cerrar Caja</button>
+        <!-- SECCIÓN CLIENTES -->
+        <div id="sec-clientes" class="content-area">
+            <div class="flex-row">
+                <div class="card" style="width: 350px;">
+                    <h2>Nuevo Cliente</h2>
+                    <form id="form-cliente">
+                        <div class="form-group">
+                            <label>Nombre:</label>
+                            <input type="text" id="cli-nombre" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Teléfono:</label>
+                            <input type="text" id="cli-telefono" required>
+                        </div>
+                        <button type="submit" style="width: 100%;">Guardar Cliente</button>
+                    </form>
+                </div>
+                <div class="card flex-col">
+                    <h2>Lista de Clientes</h2>
+                    <table id="tabla-clientes">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
             </div>
+        </div>
 
-            <!-- SECCIÓN 6: MENSUAL -->
-            <div id="sec-mensual" class="tab-content">
-                <div class="card">
-                    <h2>Historial Mensual</h2>
+        <!-- SECCIÓN CORTE DE CAJA -->
+        <div id="sec-corte" class="content-area">
+            <div class="card">
+                <h2>Corte de Caja Diario</h2>
+                <div class="flex-row" style="margin-bottom: 20px;">
+                    <div class="card flex-col" style="background: var(--light-bg); margin-bottom:0;">
+                        <h3>Total Ventas</h3>
+                        <p style="font-size: 1.5rem; font-weight: bold;" id="cant-ventas">0</p>
+                    </div>
+                    <div class="card flex-col" style="background: var(--light-bg); margin-bottom:0;">
+                        <h3>Ingresos Totales</h3>
+                        <p style="font-size: 1.5rem; font-weight: bold; color: var(--success-color);">$<span id="total-ingresos">0.00</span></p>
+                    </div>
+                    <div class="card flex-col" style="background: var(--light-bg); margin-bottom:0;">
+                        <h3>Costos Totales</h3>
+                        <p style="font-size: 1.5rem; font-weight: bold; color: var(--danger-color);">$<span id="total-costos">0.00</span></p>
+                    </div>
+                    <div class="card flex-col" style="background: var(--light-bg); margin-bottom:0;">
+                        <h3>Ganancia Neta</h3>
+                        <p style="font-size: 1.5rem; font-weight: bold; color: var(--secondary-color);">$<span id="total-ganancia">0.00</span></p>
+                    </div>
+                </div>
+                <button type="button" class="btn-danger" onclick="reiniciarDia()">🔒 Cerrar Caja y Vaciar Operaciones del Día</button>
+            </div>
+            <div class="card">
+                <h2>Historial de Ventas del Día</h2>
+                <table id="tabla-historial">
+                    <thead>
+                        <tr>
+                            <th>Hora / Cliente</th>
+                            <th>Total</th>
+                            <th>Método</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SECCIÓN BALANCE GENERAL -->
+        <div id="sec-balance" class="content-area">
+            <div class="card">
+                <h2>Balance General Operativo</h2>
+                <div class="flex-row" style="margin-bottom: 20px;">
+                    <div class="card flex-col" style="background: var(--light-bg); margin-bottom:0;">
+                        <h3>Ingresos Brutos</h3>
+                        <p style="font-size: 1.4rem; font-weight: bold; color: var(--success-color);">$<span id="balance-ingresos">0.00</span></p>
+                    </div>
+                    <div class="card flex-col" style="background: var(--light-bg); margin-bottom:0;">
+                        <h3>Costos / Egresos</h3>
+                        <p style="font-size: 1.4rem; font-weight: bold; color: var(--danger-color);">$<span id="balance-egresos">0.00</span></p>
+                    </div>
+                    <div class="card flex-col" style="background: var(--light-bg); margin-bottom:0;">
+                        <h3>Ganancia Operativa</h3>
+                        <p style="font-size: 1.4rem; font-weight: bold; color: var(--secondary-color);">$<span id="balance-ganancia">0.00</span></p>
+                    </div>
+                </div>
+                <h3>Desglose de Rendimiento por Producto</h3>
+                <table id="tabla-balance-productos">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cant. Vendida</th>
+                            <th>Ingreso Total</th>
+                            <th>Costo Total</th>
+                            <th>Ganancia Neta</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SECCIÓN HISTORIAL MENSUAL -->
+        <div id="sec-mensual" class="content-area">
+            <div class="card">
+                <h2>Cortes y Resumen Mensual</h2>
+                <div class="form-group" style="width: 250px;">
                     <label>Seleccionar Mes:</label>
                     <select id="select-mes-filtro" onchange="actualizarVistaMensual()"></select>
-
-                    <div class="corte-resumen" style="background-color: #f0fdf4;">
-                        <p><strong>Días Registrados:</strong> <span id="mes-dias">0</span></p>
-                        <p><strong>Venta Total del Mes:</strong> $<span id="mes-total-ingresos">0.00</span></p>
-                        <hr>
-                        <p style="color: #166534; font-size: 1.25rem;"><strong>Ganancia Neta del Mes:</strong> $<span id="mes-total-ganancias">0.00</span></p>
+                </div>
+                <div class="flex-row" style="margin: 15px 0;">
+                    <div class="card flex-col" style="background: var(--light-bg); margin-bottom:0;">
+                        <h3>Días Operados</h3>
+                        <p style="font-size: 1.3rem; font-weight: bold;" id="mes-dias">0</p>
                     </div>
-
-                    <h3 style="font-size: 1rem; margin-top: 15px;">Cortes Diarios</h3>
-                    <div style="max-height: 220px; overflow-y: auto;">
-                        <table id="tabla-cortes-mensuales">
-                            <thead>
-                                <tr><th>Fecha</th><th>Ventas</th><th>Total ($)</th><th>Ganancia ($)</th></tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                    <div class="card flex-col" style="background: var(--light-bg); margin-bottom:0;">
+                        <h3>Ingresos del Mes</h3>
+                        <p style="font-size: 1.3rem; font-weight: bold; color: var(--success-color);">$<span id="mes-total-ingresos">0.00</span></p>
+                    </div>
+                    <div class="card flex-col" style="background: var(--light-bg); margin-bottom:0;">
+                        <h3>Ganancias del Mes</h3>
+                        <p style="font-size: 1.3rem; font-weight: bold; color: var(--secondary-color);">$<span id="mes-total-ganancias">0.00</span></p>
                     </div>
                 </div>
+                <table id="tabla-cortes-mensuales">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Ventas</th>
+                            <th>Total Ingresos</th>
+                            <th>Ganancia Neta</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
+        </div>
 
-            <!-- SECCIÓN 7: CONFIGURACIÓN DE NUBE -->
-            <div id="sec-nube" class="tab-content">
-                <div class="card">
-                    <h2>Configuración de Conexión Automática</h2>
-                    <p style="font-size: 0.9rem; color: #555;">
-                        Funciona sin internet. Si configuras esto, intentará sincronizar cuando detecte red.
-                    </p>
-
-                    <label>URL de Google Apps Script:</label>
+        <!-- SECCIÓN CONFIGURACIÓN -->
+        <div id="sec-config" class="content-area">
+            <div class="card" style="max-width: 500px;">
+                <h2>Configuración de Nube y Base de Datos</h2>
+                <div class="form-group">
+                    <label>URL de Google Apps Script / Base de Datos:</label>
                     <input type="text" id="nube-database-url" placeholder="https://script.google.com/macros/s/.../exec">
-                    
-                    <label>Clave o Token Secreto:</label>
-                    <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123">
-
-                    <button type="button" class="btn-info" onclick="guardarCredencialesNube()" style="margin-top: 10px;">Guardar Configuración y Probar</button>
                 </div>
-            </div>
-
-            <!-- SECCIÓN 8: SEGURIDAD -->
-            <div id="sec-reiniciar" class="tab-content">
-                <div class="card">
-                    <h2>🔒 Seguridad Local del Dispositivo</h2>
-                    <div id="contenedor-config-nip" style="background: #f8fafc; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
-                        <h3 style="font-size: 0.95rem; margin-top:0;">NIP de Bloqueo Local</h3>
-                        <p id="lbl-estado-nip" style="font-size: 0.85rem; color: #e74c3c;">Estado: NIP no configurado.</p>
-                        <input type="password" id="nuevo-nip" placeholder="Crear o cambiar NIP">
-                        <button type="button" class="btn-info" onclick="guardarNIP()">Guardar NIP</button>
-                    </div>
+                <div class="form-group">
+                    <label>Token de Seguridad:</label>
+                    <input type="password" id="nube-token" placeholder="Tu token secreto">
                 </div>
+                <div class="form-group">
+                    <label>NIP de Seguridad para Operaciones Críticas (Cierre de Caja, Borrar Venta):</label>
+                    <input type="password" id="config-nip" placeholder="Ej. 1234 (Dejar en blanco para desactivar)" maxlength="6">
+                </div>
+                <button type="button" onclick="guardarCredencialesNube()" style="width: 100%;">Guardar Configuración</button>
             </div>
         </div>
     </div>
 
-    <!-- CONTENEDOR OCULTO PARA IMPRESIÓN TÉRMICA -->
-    <div id="print-ticket-container"></div>
+    <!-- MODAL TICKET -->
+    <div id="modal-ticket" class="modal">
+        <div class="modal-content" style="text-align: center;">
+            <h3>Vista Previa del Ticket</h3>
+            <div id="ticket-visual-body" class="ticket-container" style="margin: 15px auto;"></div>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn-success" style="flex:1;" onclick="window.print()">Imprimir</button>
+                <button type="button" class="btn-danger" style="flex:1;" onclick="cerrarModalTicket()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="print-ticket-container" style="display:none;"></div>
 
     <script>
-        // QUITAR PANTALLA DE CARGA DEL OSO A LOS 2 SEGUNDOS EXACTOS
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const splash = document.getElementById('splash-screen');
-                splash.classList.add('fade-out');
-            }, 2000);
-        });
-
-        let db;
+        // ESTADO GLOBAL DE LA APLICACIÓN
         let productos = {};
         let clientes = {};
         let ventasDelDia = [];
         let historialMensual = [];
         let carrito = [];
         let ultimaVentaRealizada = null;
-        let nipSeguridad = "";
-        let ultimaHuellaNube = "";
+        let nipSeguridad = '';
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            if (window.innerWidth <= 768) {
-                sidebar.classList.toggle('open');
-            } else {
-                sidebar.classList.toggle('collapsed');
-            }
-        }
+        // INICIALIZACIÓN AL CARGAR LA PÁGINA
+        window.addEventListener('DOMContentLoaded', () => {
+            cargarDatosLocales();
+            actualizarTablaProductos();
+            actualizarTablaClientes();
+            actualizarSelectClientes();
+            actualizarListaSugerencias();
+            actualizarVistaCorte();
+            actualizarVistaBalance();
+            actualizarTablaTicketsVentasDia();
+            
+            document.getElementById('nube-database-url').value = localStorage.getItem('nubeUrl') || '';
+            document.getElementById('nube-token').value = localStorage.getItem('nubeToken') || '';
+            nipSeguridad = localStorage.getItem('nipSeguridad') || '';
+            document.getElementById('config-nip').value = nipSeguridad;
 
-        const request = indexedDB.open('PuntoVentaSheetAutoDB', 2);
-        request.onsuccess = function(event) {
-            db = event.target.result;
-            cargarDatosLocalesYrenderizar();
-        };
-        request.onupgradeneeded = function(event) {
-            db = event.target.result;
-            if (!db.objectStoreNames.contains('almacen')) db.createObjectStore('almacen');
-        };
-
-        function guardarEnDB(clave, valor, callback) {
-            if (!db) return;
-            const transaction = db.transaction(['almacen'], 'readwrite');
-            const store = transaction.objectStore('almacen');
-            const req = store.put(valor, clave);
-            req.onsuccess = () => { if (callback) callback(); };
-        }
-
-        function cargarDatosLocalesYrenderizar() {
-            const transaction = db.transaction(['almacen'], 'readonly');
-            const store = transaction.objectStore('almacen');
-
-            store.get('productos').onsuccess = (e) => { productos = e.target.result || {}; actualizarTablaProductos(); actualizarListaSugerencias(); };
-            store.get('clientes').onsuccess = (e) => { clientes = e.target.result || {}; actualizarTablaClientes(); actualizarSelectClientes(); };
-            store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); actualizarTablaTicketsVentasDia(); };
-            store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; };
-            store.get('nubeUrl').onsuccess = (e) => { 
-                if(e.target.result) document.getElementById('nube-database-url').value = e.target.result;
-            };
-            store.get('nubeToken').onsuccess = (e) => { 
-                if(e.target.result) {
-                    document.getElementById('nube-token').value = e.target.result;
-                    descargarDeLaNubeAutomatico(false);
-                }
-            };
-            store.get('nipSeguridad').onsuccess = (e) => { nipSeguridad = e.target.result || ""; actualizarInterfazNIP(); };
-        }
-
-        function actualizarInterfazNIP() {
-            const lbl = document.getElementById('lbl-estado-nip');
-            if (nipSeguridad) {
-                lbl.innerText = "Estado: NIP configurado correctamente.";
-                lbl.style.color = "#27ae60";
-            } else {
-                lbl.innerText = "Estado: NIP no configurado.";
-                lbl.style.color = "#e74c3c";
-            }
-        }
-
-        function guardarNIP() {
-            const val = document.getElementById('nuevo-nip').value.trim();
-            if (!val) return alert('Escribe un NIP válido.');
-            nipSeguridad = val;
-            guardarEnDB('nipSeguridad', nipSeguridad, () => {
-                actualizarInterfazNIP();
-                document.getElementById('nuevo-nip').value = '';
-                alert('¡NIP guardado con éxito!');
+            // Guardar cambios del NIP al escribir
+            document.getElementById('config-nip').addEventListener('input', (e) => {
+                nipSeguridad = e.target.value.trim();
+                localStorage.setItem('nipSeguridad', nipSeguridad);
             });
-        }
 
-        function cambiarPestana(idSeccion, boton) {
-            document.querySelectorAll('.tab-content').forEach(s => {
-                s.classList.remove('active');
-                setTimeout(() => { if (!s.classList.contains('active')) s.style.display = 'none'; }, 300);
-            });
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            
-            const seccionActiva = document.getElementById(idSeccion);
-            seccionActiva.style.display = 'block';
-            setTimeout(() => seccionActiva.classList.add('active'), 10);
-            
-            boton.classList.add('active');
-
-            if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
-            
-            if (idSeccion === 'sec-balance' || idSeccion === 'sec-corte') {
-                actualizarVistaBalance();
-                actualizarVistaCorte();
-            } else if (idSeccion === 'sec-mensual') {
-                inicializarSelectorMeses();
-            }
-        }
-
-        // --- GESTIÓN DE PRODUCTOS Y CARRITO ---
-        function actualizarListaSugerencias() {
-            const datalist = document.getElementById('lista-sugerencias-productos');
-            datalist.innerHTML = '';
-            for (let codigo in productos) {
-                const p = productos[codigo];
-                const option = document.createElement('option');
-                option.value = p.nombre;
-                option.innerText = `Stock: ${p.stock} | $${p.precio}`;
-                datalist.appendChild(option);
-            }
-        }
-
-        document.getElementById('form-venta').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const busqueda = document.getElementById('venta-busqueda').value.trim().toLowerCase();
-            let encontradoCodigo = null;
-
-            for (let codigo in productos) {
-                if (codigo.toLowerCase() === busqueda || productos[codigo].nombre.toLowerCase() === busqueda) {
-                    encontradoCodigo = codigo;
-                    break;
-                }
-            }
-
-            if (!encontradoCodigo) {
-                alert('Producto no encontrado.');
-                return;
-            }
-
-            const producto = productos[encontradoCodigo];
-            if (producto.stock <= 0) {
-                alert('¡Stock agotado para este producto!');
-                return;
-            }
-
-            agregarAlCarrito(encontradoCodigo);
-            document.getElementById('venta-busqueda').value = '';
+            descargarDeLaNubeAutomatico(false);
         });
 
-        function agregarAlCarrito(codigoProd) {
-            const producto = productos[codigoProd];
-            if (!producto) return;
+        // MANEJO DE ALMACENAMIENTO LOCAL
+        function guardarEnDB(key, data, callback) {
+            try {
+                localStorage.setItem('tranzaks_' + key, JSON.stringify(data));
+                if(callback) callback();
+            } catch(e) {
+                console.error("Error al guardar localmente:", e);
+            }
+        }
 
-            const index = carrito.findIndex(item => item.codigo === codigoProd);
-            if (index > -1) {
-                if (carrito[index].cantidad + 1 > producto.stock) {
-                    alert('No hay suficiente stock disponible.');
-                    return;
+        function cargarDatosLocales() {
+            try {
+                const p = localStorage.getItem('tranzaks_productos');
+                if(p) productos = JSON.parse(p);
+
+                const c = localStorage.getItem('tranzaks_clientes');
+                if(c) clientes = JSON.parse(c);
+
+                const v = localStorage.getItem('tranzaks_ventasDelDia');
+                if(v) ventasDelDia = JSON.parse(v);
+
+                const h = localStorage.getItem('tranzaks_historialMensual');
+                if(h) historialMensual = JSON.parse(h);
+            } catch(e) {
+                console.error("Error al cargar datos locales:", e);
+            }
+        }
+
+        // NAVEGACIÓN ENTRE SECCIONES
+        function cambiarSeccion(idSeccion, btnElement) {
+            document.querySelectorAll('.content-area').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(idSeccion).classList.add('active');
+            btnElement.classList.add('active');
+
+            if (idSeccion === 'sec-corte') {
+                actualizarVistaCorte();
+            }
+            if (idSeccion === 'sec-balance') {
+                actualizarVistaCorte();
+                actualizarVistaBalance();
+                actualizarTablaTicketsVentasDia();
+            }
+            if (idSeccion === 'sec-mensual') {
+                inicializarSelectorMeses();
+                actualizarVistaMensual();
+            }
+        }
+
+        // FORMULARIO CLIENTES
+        document.getElementById('form-cliente').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('cli-nombre').value.trim();
+            const telefono = document.getElementById('cli-telefono').value.trim();
+            if(!nombre || !telefono) return;
+
+            clientes[nombre] = { nombre, telefono };
+            guardarEnDB('clientes', clientes, () => {
+                actualizarTablaClientes();
+                actualizarSelectClientes();
+                document.getElementById('form-cliente').reset();
+                alert('¡Cliente guardado con éxito!');
+            });
+        });
+
+        function actualizarTablaClientes() {
+            const tbody = document.querySelector('#tabla-clientes tbody');
+            tbody.innerHTML = '';
+            Object.keys(clientes).forEach(k => {
+                const c = clientes[k];
+                tbody.innerHTML += `<tr><td>${c.nombre}</td><td>${c.telefono}</td><td><button type="button" class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="eliminarCliente('${k}')">Eliminar</button></td></tr>`;
+            });
+        }
+
+        function eliminarCliente(key) {
+            delete clientes[key];
+            guardarEnDB('clientes', clientes, () => {
+                actualizarTablaClientes();
+                actualizarSelectClientes();
+            });
+        }
+
+        function actualizarSelectClientes() {
+            const sel = document.getElementById('venta-cliente');
+            sel.innerHTML = '<option value="Público General">Público General</option>';
+            Object.keys(clientes).forEach(k => {
+                sel.innerHTML += `<option value="${k}">${k}</option>`;
+            });
+        }
+
+        // FORMULARIO PRODUCTOS
+        document.getElementById('form-producto').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const codigo = document.getElementById('prod-codigo').value.trim();
+            const nombre = document.getElementById('prod-nombre').value.trim();
+            const costo = parseFloat(document.getElementById('prod-costo').value);
+            const precio = parseFloat(document.getElementById('prod-precio').value);
+            const stock = parseInt(document.getElementById('prod-stock').value);
+            const fileInput = document.getElementById('prod-imagen');
+
+            if(costo >= precio) {
+                if(!confirm('El costo es mayor o igual al precio de venta. ¿Deseas continuar de todas formas?')) return;
+            }
+
+            const procesarGuardado = (imagenBase64) => {
+                productos[codigo] = {
+                    codigo,
+                    nombre,
+                    costo,
+                    precio,
+                    stock,
+                    imagen: imagenBase64 || (productos[codigo] ? productos[codigo].imagen : '')
+                };
+                guardarEnDB('productos', productos, () => {
+                    actualizarTablaProductos();
+                    actualizarListaSugerencias();
+                    document.getElementById('form-producto').reset();
+                    alert('¡Producto guardado exitosamente!');
+                });
+            };
+
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(evt) { procesarGuardado(evt.target.result); };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                procesarGuardado(null);
+            }
+        });
+
+        function actualizarTablaProductos() {
+            const tbody = document.querySelector('#tabla-productos tbody');
+            tbody.innerHTML = '';
+            let inversionInv = 0;
+            Object.keys(productos).forEach(k => {
+                const p = productos[k];
+                inversionInv += (p.costo * p.stock);
+                const imgTag = p.imagen ? `<img src="${p.imagen}" class="img-preview-table" onclick="verImagenAmpliada('${p.imagen}')">` : 'Sin img';
+                tbody.innerHTML += `<tr>
+                    <td>${imgTag}</td>
+                    <td>${p.codigo}</td>
+                    <td>${p.nombre}</td>
+                    <td>$${p.costo.toFixed(2)}</td>
+                    <td>$${p.precio.toFixed(2)}</td>
+                    <td>${p.stock}</td>
+                    <td><button type="button" class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="eliminarProducto('${k}')">Borrar</button></td>
+                </tr>`;
+            });
+            document.getElementById('inversion-total-inventario').innerText = inversionInv.toFixed(2);
+        }
+
+        function eliminarProducto(key) {
+            delete productos[key];
+            guardarEnDB('productos', productos, () => {
+                actualizarTablaProductos();
+                actualizarListaSugerencias();
+            });
+        }
+
+        function verImagenAmpliada(url) {
+            const w = window.open('');
+            w.document.write(`<img src="${url}" style="max-width:100%;">`);
+        }
+
+        function actualizarListaSugerencias() {
+            const dl = document.getElementById('lista-sugerencias-productos');
+            dl.innerHTML = '';
+            Object.keys(productos).forEach(k => {
+                const p = productos[k];
+                dl.innerHTML += `<option value="${p.codigo}">${p.nombre} - Stock: ${p.stock} - $${p.precio.toFixed(2)}</option>`;
+                dl.innerHTML += `<option value="${p.nombre}">`;
+            });
+        }
+
+        // GESTIÓN DE VENTAS Y CARRITO
+        document.getElementById('form-venta').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const inputVal = document.getElementById('venta-busqueda').value.trim();
+            if(!inputVal) return;
+
+            let prodEncontrado = null;
+            Object.keys(productos).forEach(k => {
+                const p = productos[k];
+                if(p.codigo.toLowerCase() === inputVal.toLowerCase() || p.nombre.toLowerCase() === inputVal.toLowerCase()) {
+                    prodEncontrado = p;
                 }
-                carrito[index].cantidad += 1;
+            });
+
+            if(!prodEncontrado) {
+                alert('Producto no encontrado en el inventario.');
+                return;
+            }
+
+            if(prodEncontrado.stock <= 0) {
+                alert('¡Advertencia! Este producto no tiene stock disponible.');
+            }
+
+            const indexEnCarrito = carrito.findIndex(item => item.codigo === prodEncontrado.codigo);
+            if(indexEnCarrito >= 0) {
+                carrito[indexEnCarrito].cantidad++;
             } else {
                 carrito.push({
-                    codigo: codigoProd,
-                    nombre: producto.nombre,
-                    cantidad: 1,
-                    precioUnitario: parseFloat(producto.precio),
-                    costoUnitario: parseFloat(producto.costo)
+                    codigo: prodEncontrado.codigo,
+                    nombre: prodEncontrado.nombre,
+                    precioUnitario: prodEncontrado.precio,
+                    costoUnitario: prodEncontrado.costo,
+                    cantidad: 1
                 });
             }
+
+            document.getElementById('venta-busqueda').value = '';
             renderizarCarrito();
-        }
+        });
 
         function renderizarCarrito() {
             const tbody = document.querySelector('#tabla-carrito tbody');
             tbody.innerHTML = '';
             let total = 0;
-
             carrito.forEach((item, index) => {
-                const subtotal = item.cantidad * item.precioUnitario;
-                total += subtotal;
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
+                const sub = item.cantidad * item.precioUnitario;
+                total += sub;
+                tbody.innerHTML += `<tr>
                     <td>${item.nombre}</td>
-                    <td><input type="number" value="${item.cantidad}" min="1" style="width: 50px; padding: 4px;" onchange="cambiarCantidadCarrito(${index}, this.value)"></td>
-                    <td><input type="number" step="0.01" value="${item.precioUnitario}" style="width: 75px; padding: 4px;" onchange="cambiarPrecioCarrito(${index}, this.value)"></td>
-                    <td>$${subtotal.toFixed(2)}</td>
-                    <td><button type="button" class="btn-danger" style="padding: 4px 8px;" onclick="eliminarDelCarrito(${index})">X</button></td>
-                `;
-                tbody.appendChild(tr);
+                    <td><input type="number" min="1" value="${item.cantidad}" style="width:60px; padding:2px;" onchange="cambiarCantidadCarrito(${index}, this.value)"></td>
+                    <td>$${item.precioUnitario.toFixed(2)}</td>
+                    <td>$${sub.toFixed(2)}</td>
+                    <td><button type="button" class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="eliminarDelCarrito(${index})">X</button></td>
+                </tr>`;
             });
-
             document.getElementById('total-venta').innerText = total.toFixed(2);
-            if (typeof calcularCambio === 'function') calcularCambio();
+            calcularCambio();
         }
 
-        function cambiarCantidadCarrito(index, nuevaCant) {
-            const cant = parseInt(nuevaCant);
-            const item = carrito[index];
-            const producto = productos[item.codigo];
-
-            if (isNaN(cant) || cant <= 0) {
-                alert('Cantidad inválida.');
-                renderizarCarrito();
-                return;
+        function cambiarCantidadCarrito(index, val) {
+            const nuevaCant = parseInt(val);
+            if(isNaN(nuevaCant) || nuevaCant <= 0) {
+                carrito.splice(index, 1);
+            } else {
+                carrito[index].cantidad = nuevaCant;
             }
-
-            if (cant > producto.stock) {
-                alert('Stock insuficiente.');
-                renderizarCarrito();
-                return;
-            }
-
-            item.cantidad = cant;
-            renderizarCarrito();
-        }
-
-        function cambiarPrecioCarrito(index, nuevoPrecio) {
-            const precioNum = parseFloat(nuevoPrecio);
-            if (isNaN(precioNum) || precioNum < 0) {
-                alert('Ingresa un precio válido.');
-                renderizarCarrito();
-                return;
-            }
-            carrito[index].precioUnitario = precioNum;
             renderizarCarrito();
         }
 
@@ -905,16 +849,40 @@
         }
 
         function cambiarMetodoPago() {
-            const metodo = document.getElementById('metodo-pago').value;
-            const contenedorEfectivo = document.getElementById('contenedor-efectivo');
-            contenedorEfectivo.style.display = (metodo === 'Efectivo') ? 'block' : 'none';
+            const met = document.getElementById('metodo-pago').value;
+            const cont = document.getElementById('contenedor-efectivo');
+            cont.style.display = (met === 'Efectivo') ? 'block' : 'none';
         }
 
         function calcularCambio() {
             const total = carrito.reduce((acc, item) => acc + (item.cantidad * item.precioUnitario), 0);
+            const metodo = document.getElementById('metodo-pago').value;
+            if(metodo !== 'Efectivo') {
+                document.getElementById('monto-cambio').innerText = '0.00';
+                return;
+            }
             const pagado = parseFloat(document.getElementById('monto-pagado').value) || 0;
             const cambio = pagado - total;
             document.getElementById('monto-cambio').innerText = cambio >= 0 ? cambio.toFixed(2) : '0.00';
+        }
+
+        // ==========================================
+        // INTEGRACIÓN NIP DE SEGURIDAD Y VENTA
+        // ==========================================
+
+        function solicitarAutorizacionNip(mensajeAccion, callbackExito) {
+            if (!nipSeguridad) {
+                callbackExito();
+                return;
+            }
+            const nipIngresado = prompt(`Autorización requerida: ${mensajeAccion}\nIngresa el NIP de seguridad:`);
+            if (nipIngresado === null) return;
+
+            if (nipIngresado === nipSeguridad) {
+                callbackExito();
+            } else {
+                alert('NIP incorrecto. Acción denegada.');
+            }
         }
 
         function procesarVenta() {
@@ -934,13 +902,18 @@
             if (metodoPago === 'Efectivo') {
                 pagado = parseFloat(document.getElementById('monto-pagado').value) || 0;
                 if (pagado < total) {
-                    alert('El monto pagado es menor al total de la venta.');
+                    solicitarAutorizacionNip("Monto recibido menor al precio registrado", () => {
+                        continuarProcesamientoVenta(cliente, metodoPago, total, costoTotal, pagado, 0);
+                    });
                     return;
                 }
                 cambio = pagado - total;
             }
 
-            // Descontar stock local
+            continuarProcesamientoVenta(cliente, metodoPago, total, costoTotal, pagado, cambio);
+        }
+
+        function continuarProcesamientoVenta(cliente, metodoPago, total, costoTotal, pagado, cambio) {
             carrito.forEach(item => {
                 if (productos[item.codigo]) {
                     productos[item.codigo].stock -= item.cantidad;
@@ -964,7 +937,6 @@
             ventasDelDia.push(nuevaVenta);
             ultimaVentaRealizada = nuevaVenta;
 
-            // Guardar en Base de Datos Local
             guardarEnDB('productos', productos, () => {
                 guardarEnDB('ventasDelDia', ventasDelDia, () => {
                     actualizarTablaProductos();
@@ -983,131 +955,114 @@
             });
         }
 
-        // --- GESTIÓN DE CLIENTES Y PRODUCTOS EN INTERFAZ ---
-        document.getElementById('form-cliente').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const nombre = document.getElementById('cli-nombre').value.trim();
-            const telefono = document.getElementById('cli-telefono').value.trim();
-
-            if (!nombre) return;
-            clientes[nombre] = { telefono };
-            guardarEnDB('clientes', clientes, () => {
-                actualizarTablaClientes();
-                actualizarSelectClientes();
-                document.getElementById('form-cliente').reset();
-                alert('Cliente guardado.');
-            });
-        });
-
-        function actualizarTablaClientes() {
-            const tbody = document.querySelector('#tabla-clientes tbody');
+        // VISUALIZACIÓN Y TICKETS
+        function actualizarTablaTicketsVentasDia() {
+            const tbody = document.querySelector('#tabla-ventas-dia-tickets tbody');
             tbody.innerHTML = '';
-            for (let nombre in clientes) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${nombre}</td><td>${clientes[nombre].telefono}</td><td><button class="btn-danger" style="padding:4px;" onclick="eliminarCliente('${nombre}')">Eliminar</button></td>`;
-                tbody.appendChild(tr);
-            }
-        }
-
-        function actualizarSelectClientes() {
-            const select = document.getElementById('venta-cliente');
-            select.innerHTML = '<option value="Público General">Público General</option>';
-            for (let nombre in clientes) {
-                const opt = document.createElement('option');
-                opt.value = nombre;
-                opt.innerText = nombre;
-                select.appendChild(opt);
-            }
-        }
-
-        function eliminarCliente(nombre) {
-            delete clientes[nombre];
-            guardarEnDB('clientes', clientes, () => {
-                actualizarTablaClientes();
-                actualizarSelectClientes();
+            ventasDelDia.forEach((v, idx) => {
+                tbody.innerHTML += `<tr>
+                    <td>${v.fecha} - ${v.cliente}</td>
+                    <td>$${v.total.toFixed(2)}</td>
+                    <td><button type="button" class="btn-info" style="padding:4px 8px; font-size:0.8rem;" onclick="verTicketIndice(${idx})">Ver Ticket</button></td>
+                </tr>`;
             });
         }
 
-        document.getElementById('form-producto').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const codigo = document.getElementById('prod-codigo').value.trim();
-            const nombre = document.getElementById('prod-nombre').value.trim();
-            const costo = parseFloat(document.getElementById('prod-costo').value);
-            const precio = parseFloat(document.getElementById('prod-precio').value);
-            const stock = parseInt(document.getElementById('prod-stock').value);
-            const imagenInput = document.getElementById('prod-imagen');
+        function verTicketIndice(idx) {
+            const v = ventasDelDia[idx];
+            if(!v) return;
+            mostrarModalTicket(v);
+        }
 
-            let imagenUrl = productos[codigo]?.imagen || '';
+        function imprimirUltimoTicket() {
+            if(!ultimaVentaRealizada) return;
+            mostrarModalTicket(ultimaVentaRealizada);
+            setTimeout(() => { window.print(); }, 400);
+        }
 
-            const guardarConDatos = (imgData) => {
-                productos[codigo] = { nombre, costo, precio, stock, imagen: imgData || imagenUrl };
-                guardarEnDB('productos', productos, () => {
-                    actualizarTablaProductos();
-                    actualizarListaSugerencias();
-                    document.getElementById('form-producto').reset();
-                    alert('Producto guardado con éxito.');
+        function mostrarModalTicket(v) {
+            let htmlItems = '';
+            v.productos.forEach(i => {
+                htmlItems += `<div>${i.cantidad}x ${i.nombre} - $${(i.cantidad * i.precioUnitario).toFixed(2)}</div>`;
+            });
+
+            const contenidoTicket = `
+                <div style="text-align: center; font-weight: bold; font-size: 14px;">TRANZAKS POS</div>
+                <div style="text-align: center; font-size: 10px;">Sistema Híbrido de Ventas</div>
+                <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+                <div>Fecha: ${v.fecha}</div>
+                <div>Cliente: ${v.cliente}</div>
+                <div>Pago: ${v.metodoPago}</div>
+                <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+                <div><strong>Cant / Descripción / Importe</strong></div>
+                ${htmlItems}
+                <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+                <div style="text-align: right;"><strong>TOTAL: $${v.total.toFixed(2)}</strong></div>
+                ${v.metodoPago === 'Efectivo' ? `<div style="text-align: right;">Efectivo: $${v.pagado.toFixed(2)}</div><div style="text-align: right;">Cambio: $${v.cambio.toFixed(2)}</div>` : ''}
+                <hr style="border-top: 1px dashed #000; margin: 5px 0;">
+                <div style="text-align: center; font-size: 10px; margin-top: 10px;">¡Gracias por su compra!</div>
+            `;
+
+            document.getElementById('ticket-visual-body').innerHTML = contenidoTicket;
+            document.getElementById('print-ticket-container').innerHTML = contenidoTicket;
+            document.getElementById('modal-ticket').style.display = 'flex';
+        }
+
+        function cerrarModalTicket() {
+            document.getElementById('modal-ticket').style.display = 'none';
+        }
+
+        // CORTE Y BALANCE
+        function actualizarVistaCorte() {
+            let ingresos = 0;
+            let costos = 0;
+            ventasDelDia.forEach(v => {
+                ingresos += v.total;
+                costos += v.costo;
+            });
+            document.getElementById('cant-ventas').innerText = ventasDelDia.length;
+            document.getElementById('total-ingresos').innerText = ingresos.toFixed(2);
+            document.getElementById('total-costos').innerText = costos.toFixed(2);
+            document.getElementById('total-ganancia').innerText = (ingresos - costos).toFixed(2);
+
+            const tbody = document.querySelector('#tabla-historial tbody');
+            tbody.innerHTML = '';
+            ventasDelDia.forEach((v, idx) => {
+                tbody.innerHTML += `<tr>
+                    <td>${v.fecha} (${v.cliente})</td>
+                    <td>$${v.total.toFixed(2)}</td>
+                    <td>${v.metodoPago}</td>
+                    <td><button type="button" class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="eliminarVentaDia(${idx})">Borrar</button></td>
+                </tr>`;
+            });
+        }
+
+        function eliminarVentaDia(idx) {
+            solicitarAutorizacionNip("Eliminar venta registrada del día", () => {
+                ventasDelDia.splice(idx, 1);
+                guardarEnDB('ventasDelDia', ventasDelDia, () => {
+                    actualizarVistaCorte();
+                    actualizarVistaBalance();
+                    actualizarTablaTicketsVentasDia();
                 });
-            };
-
-            if (imagenInput.files && imagenInput.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(uploadEvent) {
-                    guardarConDatos(uploadEvent.target.result);
-                };
-                reader.readAsDataURL(imagenInput.files[0]);
-            } else {
-                guardarConDatos(imagenUrl);
-            }
-        });
-
-        function actualizarTablaProductos() {
-            const tbody = document.querySelector('#tabla-productos tbody');
-            tbody.innerHTML = '';
-            let inversionTotal = 0;
-
-            for (let codigo in productos) {
-                const p = productos[codigo];
-                inversionTotal += (p.costo * p.stock);
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img'}</td>
-                    <td>${codigo}</td>
-                    <td>${p.nombre}</td>
-                    <td>$${p.costo.toFixed(2)}</td>
-                    <td>$${p.precio.toFixed(2)}</td>
-                    <td>${p.stock}</td>
-                    <td><button class="btn-danger" style="padding:4px;" onclick="eliminarProducto('${codigo}')">Eliminar</button></td>
-                `;
-                tbody.appendChild(tr);
-            }
-            document.getElementById('inversion-total-inventario').innerText = inversionTotal.toFixed(2);
-        }
-
-        function eliminarProducto(codigo) {
-            delete productos[codigo];
-            guardarEnDB('productos', productos, () => {
-                actualizarTablaProductos();
-                actualizarListaSugerencias();
             });
         }
 
-        // --- BALANCE, CORTE Y TICKETS ---
         function actualizarVistaBalance() {
             let ingresos = 0;
             let egresos = 0;
-            let productosVendidos = {};
+            let mapaProd = {};
 
             ventasDelDia.forEach(v => {
                 ingresos += v.total;
                 egresos += v.costo;
-                v.productos.forEach(item => {
-                    if (!productosVendidos[item.codigo]) {
-                        productosVendidos[item.codigo] = { nombre: item.nombre, cant: 0, ingreso: 0, costo: 0 };
+                v.productos.forEach(i => {
+                    if(!mapaProd[i.codigo]) {
+                        mapaProd[i.codigo] = { nombre: i.nombre, cant: 0, ingreso: 0, costo: 0 };
                     }
-                    productosVendidos[item.codigo].cant += item.cantidad;
-                    productosVendidos[item.codigo].ingreso += (item.cantidad * item.precioUnitario);
-                    productosVendidos[item.codigo].costo += (item.cantidad * item.costoUnitario);
+                    mapaProd[i.codigo].cant += i.cantidad;
+                    mapaProd[i.codigo].ingreso += (i.cantidad * i.precioUnitario);
+                    mapaProd[i.codigo].costo += (i.cantidad * i.costoUnitario);
                 });
             });
 
@@ -1117,215 +1072,129 @@
 
             const tbody = document.querySelector('#tabla-balance-productos tbody');
             tbody.innerHTML = '';
-            for (let cod in productosVendidos) {
-                const p = productosVendidos[cod];
-                const gananciaProd = p.ingreso - p.costo;
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${p.nombre}</td><td>${p.cant}</td><td>$${p.ingreso.toFixed(2)}</td><td>$${p.costo.toFixed(2)}</td><td>$${gananciaProd.toFixed(2)}</td>`;
-                tbody.appendChild(tr);
-            }
-        }
-
-        function actualizarVistaCorte() {
-            let ingresos = 0;
-            let costos = 0;
-            ventasDelDia.forEach(v => {
-                ingresos += v.total;
-                costos += v.costo;
+            Object.keys(mapaProd).forEach(k => {
+                const p = mapaProd[k];
+                const gan = p.ingreso - p.costo;
+                tbody.innerHTML += `<tr>
+                    <td>${p.nombre}</td>
+                    <td>${p.cant}</td>
+                    <td>$${p.ingreso.toFixed(2)}</td>
+                    <td>$${p.costo.toFixed(2)}</td>
+                    <td>$${gan.toFixed(2)}</td>
+                </tr>`;
             });
-
-            document.getElementById('cant-ventas').innerText = ventasDelDia.length;
-            document.getElementById('total-ingresos').innerText = ingresos.toFixed(2);
-            document.getElementById('total-costos').innerText = costos.toFixed(2);
-            document.getElementById('total-ganancia').innerText = (ingresos - costos).toFixed(2);
-
-            const tbody = document.querySelector('#tabla-historial tbody');
-            tbody.innerHTML = '';
-            ventasDelDia.forEach((v, index) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${v.fecha} - ${v.cliente}</td><td>$${v.total.toFixed(2)}</td><td>${v.metodoPago}</td><td><button class="btn-danger" style="padding:3px;" onclick="eliminarVentaDia(${index})">X</button></td>`;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function eliminarVentaDia(index) {
-            ventasDelDia.splice(index, 1);
-            guardarEnDB('ventasDelDia', ventasDelDia, () => {
-                actualizarVistaCorte();
-                actualizarVistaBalance();
-                actualizarTablaTicketsVentasDia();
-            });
-        }
-
-        function actualizarTablaTicketsVentasDia() {
-            const tbody = document.querySelector('#tabla-ventas-dia-tickets tbody');
-            tbody.innerHTML = '';
-            ventasDelDia.forEach(v => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${v.fecha} (${v.cliente})</td><td>$${v.total.toFixed(2)}</td><td><button class="btn-info" style="padding:4px;" onclick="visualizarTicketPorId(${v.id})">Ver Ticket</button></td>`;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function generarHtmlTicket(v) {
-            let htmlItems = '';
-            v.productos.forEach(i => {
-                htmlItems += `<div>${i.nombre} x${i.cantidad} ... $${(i.cantidad * i.precioUnitario).toFixed(2)}</div>`;
-            });
-
-            return `
-                <div style="text-align: center; font-weight: bold;">PUNTO DE VENTA HÍBRIDO</div>
-                <div style="text-align: center;">Ticket de Venta</div>
-                <div>--------------------------------</div>
-                <div>Folio: ${v.id}</div>
-                <div>Hora: ${v.fecha}</div>
-                <div>Cliente: ${v.cliente}</div>
-                <div>Pago: ${v.metodoPago}</div>
-                <div>--------------------------------</div>
-                <div>${htmlItems}</div>
-                <div>--------------------------------</div>
-                <div style="text-align: right; font-weight: bold;">TOTAL: $${v.total.toFixed(2)}</div>
-                ${v.metodoPago === 'Efectivo' ? `
-                    <div style="text-align: right;">Recibido: $${v.pagado.toFixed(2)}</div>
-                    <div style="text-align: right;">Cambio: $${v.cambio.toFixed(2)}</div>
-                ` : ''}
-                <div style="text-align: center; margin-top: 10px;">¡Gracias por su compra!</div>
-            `;
-        }
-
-        function visualizarTicketPorId(id) {
-            const v = ventasDelDia.find(item => item.id === id);
-            if (!v) return;
-            document.getElementById('ticket-visual-body').innerHTML = generarHtmlTicket(v);
-            document.getElementById('modal-ticket').style.display = 'flex';
-        }
-
-        function cerrarModalTicket() {
-            document.getElementById('modal-ticket').style.display = 'none';
-        }
-
-        function imprimirUltimoTicket() {
-            if (!ultimaVentaRealizada) return;
-            const container = document.getElementById('print-ticket-container');
-            container.innerHTML = generarHtmlTicket(ultimaVentaRealizada);
-            window.print();
         }
 
         function reiniciarDia() {
-            if (ventasDelDia.length === 0) {
-                alert('No hay ventas registradas hoy para cerrar.');
-                return;
-            }
+            solicitarAutorizacionNip("Cierre de caja y vaciado de operaciones del día", () => {
+                if (ventasDelDia.length > 0) {
+                    const fechaStr = new Date().toISOString().split('T')[0];
+                    let totalV = 0, totalG = 0;
+                    ventasDelDia.forEach(v => {
+                        totalV += v.total;
+                        totalG += v.ganancia;
+                    });
+                    historialMensual.push({
+                        fecha: fechaStr,
+                        ventas: ventasDelDia.length,
+                        total: totalV,
+                        ganancia: totalG
+                    });
+                    guardarEnDB('historialMensual', historialMensual);
+                }
 
-            if (!confirm('¿Estás seguro de cerrar caja? Esto archivará el día actual en el historial mensual.')) return;
-
-            const fechaHoy = new Date().toISOString().split('T')[0];
-            let totalIngresos = 0;
-            let totalGanancias = 0;
-
-            ventasDelDia.forEach(v => {
-                totalIngresos += v.total;
-                totalGanancias += v.ganancia;
-            });
-
-            const resumenDia = {
-                fecha: fechaHoy,
-                ventasTotales: ventasDelDia.length,
-                ingresos: totalIngresos,
-                ganancias: totalGanancias,
-                detalleVentas: [...ventasDelDia]
-            };
-
-            historialMensual.push(resumenDia);
-            ventasDelDia = [];
-
-            guardarEnDB('historialMensual', historialMensual, () => {
+                ventasDelDia = [];
                 guardarEnDB('ventasDelDia', ventasDelDia, () => {
                     actualizarVistaCorte();
                     actualizarVistaBalance();
                     actualizarTablaTicketsVentasDia();
-                    alert('¡Caja cerrada y guardada en el historial mensual con éxito!');
+                    document.getElementById('btn-imprimir-ultimo').disabled = true;
+                    alert('¡Caja cerrada y reiniciada correctamente!');
                 });
             });
         }
 
-        // --- HISTORIAL MENSUAL ---
+        // HISTORIAL MENSUAL
         function inicializarSelectorMeses() {
-            const select = document.getElementById('select-mes-filtro');
-            select.innerHTML = '';
-            
-            const mesesDisponibles = [...new Set(historialMensual.map(h => h.fecha.substring(0, 7)))];
-            const mesActual = new Date().toISOString().substring(0, 7);
-            if (!mesesDisponibles.includes(mesActual)) mesesDisponibles.push(mesActual);
-
-            mesesDisponibles.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m;
-                opt.innerText = m;
-                select.appendChild(opt);
+            const sel = document.getElementById('select-mes-filtro');
+            let mesesDisponibles = {};
+            historialMensual.forEach(h => {
+                const mesKey = h.fecha.substring(0, 7); // AAAA-MM
+                mesesDisponibles[mesKey] = true;
             });
+            const mesActual = new Date().toISOString().substring(0, 7);
+            mesesDisponibles[mesActual] = true;
 
-            select.value = mesActual;
-            actualizarVistaMensual();
+            sel.innerHTML = '';
+            Object.keys(mesesDisponibles).sort().reverse().forEach(m => {
+                sel.innerHTML += `<option value="${m}">${m}</option>`;
+            });
+            sel.value = mesActual;
         }
 
         function actualizarVistaMensual() {
-            const mesSeleccionado = document.getElementById('select-mes-filtro').value;
-            const cortesFiltrados = historialMensual.filter(h => h.fecha.startsWith(mesSeleccionado));
-
-            let diasCount = cortesFiltrados.length;
-            let ingresosMes = 0;
-            let gananciasMes = 0;
-
+            const mesSel = document.getElementById('select-mes-filtro').value;
+            let diasCount = 0;
+            let totalMes = 0;
+            let gananciaMes = 0;
             const tbody = document.querySelector('#tabla-cortes-mensuales tbody');
             tbody.innerHTML = '';
 
-            cortesFiltrados.forEach(c => {
-                ingresosMes += c.ingresos;
-                gananciasMes += c.ganancias;
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${c.fecha}</td><td>${c.ventasTotales}</td><td>$${c.ingresos.toFixed(2)}</td><td>$${c.ganancias.toFixed(2)}</td>`;
-                tbody.appendChild(tr);
+            historialMensual.forEach(h => {
+                if (h.fecha.startsWith(mesSel)) {
+                    diasCount++;
+                    totalMes += h.total;
+                    gananciaMes += h.ganancia;
+                    tbody.innerHTML += `<tr>
+                        <td>${h.fecha}</td>
+                        <td>${h.ventas}</td>
+                        <td>$${h.total.toFixed(2)}</td>
+                        <td>$${h.ganancia.toFixed(2)}</td>
+                    </tr>`;
+                }
             });
 
             document.getElementById('mes-dias').innerText = diasCount;
-            document.getElementById('mes-total-ingresos').innerText = ingresosMes.toFixed(2);
-            document.getElementById('mes-total-ganancias').innerText = gananciasMes.toFixed(2);
+            document.getElementById('mes-total-ingresos').innerText = totalMes.toFixed(2);
+            document.getElementById('mes-total-ganancias').innerText = gananciaMes.toFixed(2);
         }
 
-        // --- CONFIGURACIÓN NUBE Y SEGURIDAD ---
+        // CONFIGURACIÓN NUBE
         function guardarCredencialesNube() {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
-
-            guardarEnDB('nubeUrl', url, () => {
-                guardarEnDB('nubeToken', token, () => {
-                    alert('Credenciales de nube guardadas.');
-                    if (url && token) descargarDeLaNubeAutomatico(true);
-                });
+            guardarEnDB('nubeUrl', url);
+            guardarEnDB('nubeToken', token, () => {
+                alert('Configuración guardada correctamente.');
+                descargarDeLaNubeAutomatico(true);
             });
         }
 
-        function descargarDeLaNubeAutomatico(mostrarAlerta) {
+        function descargarDeLaNubeAutomatico(mostrarAviso) {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
-            if (!url || !token) return;
+            if(!url || !token) return;
 
-            fetch(`${url}?token=${encodeURIComponent(token)}&action=obtener`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.productos) {
-                        productos = data.productos;
-                        guardarEnDB('productos', productos, () => {
-                            actualizarTablaProductos();
-                            actualizarListaSugerencias();
-                        });
-                    }
-                    if (mostrarAlerta) alert('Sincronización con la nube exitosa.');
-                })
-                .catch(() => {
-                    if (mostrarAlerta) alert('No se pudo conectar con la nube (modo offline activo).');
-                });
+            document.getElementById('sync-status').innerText = '🔄 Sincronizando con la Nube...';
+            
+            fetch(url, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'descargar', token: token })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data && data.status === 'success') {
+                    if(data.productos) { productos = data.productos; guardarEnDB('productos', productos); actualizarTablaProductos(); actualizarListaSugerencias(); }
+                    if(data.clientes) { clientes = data.clientes; guardarEnDB('clientes', clientes); actualizarTablaClientes(); actualizarSelectClientes(); }
+                    document.getElementById('sync-status').innerText = '🟢 Sincronizado con la Nube';
+                    if(mostrarAviso) alert('¡Sincronización completada con éxito!');
+                } else {
+                    document.getElementById('sync-status').innerText = '🟠 Modo Local (Error Nube)';
+                }
+            })
+            .catch(err => {
+                document.getElementById('sync-status').innerText = '🟢 Modo Local Activo (Sin conexión)';
+            });
         }
     </script>
 </body>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tranzaks - POS con Sincronización en Vivo</title>
+    <title>Tranzaks - POS con Actualización por Sección</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -11,58 +11,83 @@
     <div class="container mx-auto p-6 max-w-4xl">
         <header class="flex justify-between items-center mb-8 bg-white p-4 rounded-lg shadow">
             <h1 class="text-2xl font-bold text-gray-800">Tranzaks POS</h1>
-            <button onclick="ejecutarAccionProtegida(cerrarCaja)" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium transition">
-                Cerrar Caja (Protegido)
-            </button>
+            <div class="space-x-2">
+                <button onclick="cambiarSeccion('ventas')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium">Ventas</button>
+                <button onclick="cambiarSeccion('inventario')" class="bg-gray-600 text-white px-3 py-1 rounded text-sm font-medium">Inventario</button>
+                <button onclick="cambiarSeccion('configuracion')" class="bg-gray-600 text-white px-3 py-1 rounded text-sm font-medium">Configuración</button>
+            </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- SECCIÓN: VENTAS -->
+        <div id="seccion-ventas" class="seccion-app grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-white p-6 rounded-lg shadow">
                 <h2 class="text-lg font-semibold mb-4 text-gray-700">Procesar Venta</h2>
                 <button onclick="simularVenta()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-medium transition">
                     Completar Venta y Sincronizar
                 </button>
             </div>
-
             <div class="bg-white p-6 rounded-lg shadow">
                 <h2 class="text-lg font-semibold mb-4 text-gray-700">Estado de Sincronización</h2>
-                <p id="estado-conexion" class="text-gray-600 mb-2">Conectando con Google Drive[cite: 1]...</p>
+                <p id="estado-conexion" class="text-gray-600 mb-2">Listo para interactuar.</p>
                 <div class="text-sm font-semibold text-indigo-600 bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-                    🔄 Última actualización: <span id="timestamp-sync">Esperando sincronización...</span>
+                    🔄 Última actualización al cambiar sección: <span id="timestamp-sync">Ninguna todavía</span>
                 </div>
             </div>
+        </div>
+
+        <!-- SECCIÓN: INVENTARIO (Oculta por defecto) -->
+        <div id="seccion-inventario" class="seccion-app hidden bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Gestión de Inventario</h2>
+            <p class="text-gray-600">Aquí se mostrará el inventario actualizado desde Google Drive.</p>
+        </div>
+
+        <!-- SECCIÓN: CONFIGURACIÓN (Oculta por defecto) -->
+        <div id="seccion-configuracion" class="seccion-app hidden bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Configuración del Sistema</h2>
+            <button onclick="ejecutarAccionProtegida(cerrarCaja)" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium transition">
+                Cerrar Caja (Protegido)
+            </button>
         </div>
     </div>
 
     <script>
         const WEB_APP_URL = "TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI";
 
-        // Iniciar bucle de actualización constante cada 10 segundos
-        window.onload = function() {
-            sincronizarDatos();
-            setInterval(sincronizarDatos, 10000); // Se actualiza cada 10,000 ms (10s)
-        };
+        // Función para cambiar de sección y actualizar automáticamente al cambiar
+        function cambiarSeccion(nombreSeccion) {
+            // Ocultar todas las secciones
+            document.querySelectorAll('.seccion-app').forEach(el => el.classList.add('hidden'));
+            
+            // Mostrar la sección seleccionada
+            document.getElementById(`seccion-${nombreSeccion}`).classList.remove('hidden');
 
-        // Función para consultar cambios constantemente
+            // Actualizar estilos de los botones de navegación opcionalmente
+            console.changedSection = nombreSeccion;
+
+            // Disparar la sincronización inmediatamente al cambiar de sección
+            sincronizarDatos();
+        }
+
+        // Función de sincronización con Google Drive
         async function sincronizarDatos() {
             try {
+                document.getElementById("estado-conexion").innerText = "Actualizando datos...";
                 const response = await fetch(`${WEB_APP_URL}?accion=obtenerEstado`);
                 const resultado = await response.json();
                 
                 if (resultado.exito) {
                     actualizarTimestamp();
-                    document.getElementById("estado-conexion").innerText = "Sincronizado correctamente con Drive[cite: 1].";
+                    document.getElementById("estado-conexion").innerText = "Sincronizado con Drive correctamente.";
                 }
             } catch (error) {
-                console.error("Error en la sincronización automática:", error);
-                document.getElementById("estado-conexion").innerText = "Reintentando conexión...";
+                console.error("Error en la sincronización:", error);
+                document.getElementById("estado-conexion").innerText = "Error al actualizar al cambiar de sección.";
             }
         }
 
         function actualizarTimestamp() {
             const ahora = new Date();
-            const horaFormateada = ahora.toLocaleTimeString();
-            document.getElementById("timestamp-sync").innerText = horaFormateada;
+            document.getElementById("timestamp-sync").innerText = ahora.toLocaleTimeString();
         }
 
         // Sistema de Seguridad por NIP
@@ -90,13 +115,12 @@
         }
 
         async function cerrarCaja() {
-            alert("Acción autorizada: Caja cerrada correctamente[cite: 1].");
+            alert("Acción autorizada: Caja cerrada correctamente.");
         }
 
-        // Procesamiento de Venta y Envío a Apps Script
+        // Procesamiento de Venta
         async function procesarVentaTranzaks(carritoItems, descuentoGlobal = 0) {
             let totalVenta = 0;
-
             const itemsProcesados = carritoItems.map(item => {
                 const precioConDescuento = item.precioUnitario - (item.descuentoUnitario || 0);
                 const subtotal = precioConDescuento * item.cantidad;
@@ -120,14 +144,14 @@
                 const resultado = await response.json();
                 
                 if (resultado.exito) {
-                    alert("¡Venta registrada y guardada en Google Drive[cite: 1]!");
-                    sincronizarDatos(); // Forzar actualización visual inmediata tras la venta
+                    alert("¡Venta registrada y guardada en Google Drive!");
+                    sincronizarDatos();
                 } else {
                     alert("Hubo un problema al registrar la venta.");
                 }
             } catch (error) {
                 console.error("Error de red:", error);
-                alert("Error al conectar con Google Drive[cite: 1].");
+                alert("Error al conectar con Google Drive.");
             }
         }
 

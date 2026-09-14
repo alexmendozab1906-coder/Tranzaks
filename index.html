@@ -3,164 +3,1190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tranzaks - POS con Actualización por Sección</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Tranzaks - Punto de Venta Sincronizado</title>
+    <!-- Librería jsPDF para tickets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f1f5f9; color: #333; display: flex; height: 100vh; overflow: hidden; }
+        
+        .sidebar {
+            width: 180px;
+            background-color: #1e293b;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, margin-left 0.3s ease;
+            z-index: 1000;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+            margin-left: -180px;
+        }
+        .sidebar-header {
+            padding: 15px 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            background-color: #0f172a;
+            text-align: center;
+            border-bottom: 1px solid #334155;
+        }
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding: 15px 8px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .tab-btn {
+            padding: 10px 12px;
+            background: transparent;
+            color: #94a3b8;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.2s, color 0.2s;
+        }
+        .tab-btn:hover { background-color: #334155; color: white; }
+        .tab-btn.active { background-color: #2563eb; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        .main-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .topbar {
+            background: white;
+            padding: 10px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .menu-toggle {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+        .menu-toggle:hover { background: #1d4ed8; }
+
+        .content-area {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .card {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h2 { font-size: 1.2rem; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; margin-top: 0; }
+        input, select, button, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #219150; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .btn-danger { background-color: #e74c3c; }
+        .btn-danger:hover { background-color: #c0392b; }
+        .btn-info { background-color: #2980b9; }
+        .btn-info:hover { background-color: #2471a3; }
+        .btn-secondary { background-color: #7f8c8d; }
+        .btn-secondary:hover { background-color: #6c757d; }
+        .btn-cloud { background-color: #0284c7; }
+        .btn-cloud:hover { background-color: #0369a1; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.88rem; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: middle; }
+        th { background-color: #f8fafc; color: #475569; }
+        .monto-total { font-size: 1.5rem; color: #2c3e50; font-weight: bold; text-align: right; margin: 10px 0; }
+        .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
+        .corte-resumen p { margin: 6px 0; font-size: 1rem; }
+        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; }
+        .img-preview-form { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; display: block; margin-top: 4px; }
+        .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
+        .input-stock-table { width: 70px; padding: 4px; text-align: center; margin: 0; }
+        .input-carrito-cant { width: 60px; padding: 4px; text-align: center; margin: 0; }
+
+        /* Estilos del indicador flotante de sincronización */
+        #status-message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #1e293b;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+        }
+        .status-hidden {
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+        }
+        .status-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                height: 100%;
+                transform: translateX(-100%);
+                margin-left: 0 !important;
+            }
+            .sidebar.open { transform: translateX(0); }
+        }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<body>
 
-    <div class="container mx-auto p-6 max-w-4xl">
-        <header class="flex justify-between items-center mb-8 bg-white p-4 rounded-lg shadow">
-            <h1 class="text-2xl font-bold text-gray-800">Tranzaks POS</h1>
-            <div class="space-x-2">
-                <button onclick="cambiarSeccion('ventas')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium">Ventas</button>
-                <button onclick="cambiarSeccion('inventario')" class="bg-gray-600 text-white px-3 py-1 rounded text-sm font-medium">Inventario</button>
-                <button onclick="cambiarSeccion('configuracion')" class="bg-gray-600 text-white px-3 py-1 rounded text-sm font-medium">Configuración</button>
-            </div>
-        </header>
+    <!-- Indicador Flotante de Sincronización -->
+    <div id="status-message" class="status-hidden">
+        <span class="spinner"></span> Sincronizando datos...
+    </div>
 
-        <!-- SECCIÓN: VENTAS -->
-        <div id="seccion-ventas" class="seccion-app grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h2 class="text-lg font-semibold mb-4 text-gray-700">Procesar Venta</h2>
-                <button onclick="simularVenta()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-medium transition">
-                    Completar Venta y Sincronizar
-                </button>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h2 class="text-lg font-semibold mb-4 text-gray-700">Estado de Sincronización</h2>
-                <p id="estado-conexion" class="text-gray-600 mb-2">Listo para interactuar.</p>
-                <div class="text-sm font-semibold text-indigo-600 bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-                    🔄 Última actualización al cambiar sección: <span id="timestamp-sync">Ninguna todavía</span>
+    <div class="sidebar collapsed" id="sidebar">
+        <div class="sidebar-header">📦 Tranzaks</div>
+        <div class="sidebar-menu">
+            <button type="button" class="tab-btn active" onclick="cambiarPestana('sec-ventas', this)">1. Ventas</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-clientes', this)">2. Clientes</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-balance', this)">3. Balance</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-productos', this)">4. Productos</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-corte', this)">5. Corte</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-mensual', this)">6. Mes</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-nube', this)">☁️ 7. Sincronizar</button>
+            <button type="button" class="tab-btn" onclick="cambiarPestana('sec-reiniciar', this)">🔄 8. Seguridad</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="topbar">
+            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Tranzaks - Multi-dispositivo Sincronizado</h1>
+            <button class="menu-toggle" onclick="toggleSidebar()">☰ Menú</button>
+        </div>
+
+        <div class="content-area">
+            <!-- SECCIÓN 1: VENTAS -->
+            <div id="sec-ventas" class="tab-content" style="display: block;">
+                <div class="card">
+                    <h2>Registro de Venta</h2>
+                    <label>Cliente:</label>
+                    <select id="venta-cliente">
+                        <option value="Público General">Público General</option>
+                    </select>
+
+                    <form id="form-venta" style="margin-top: 10px;">
+                        <input type="text" id="venta-busqueda" list="lista-sugerencias-productos" placeholder="Nombre o código del producto" required autocomplete="off">
+                        <datalist id="lista-sugerencias-productos"></datalist>
+                        <button type="submit" class="btn-info">Agregar Producto</button>
+                    </form>
+
+                    <div style="max-height: 200px; overflow-y: auto; margin-top:10px;">
+                        <table id="tabla-carrito">
+                            <thead>
+                                <tr><th>Producto</th><th>Cant.</th><th>Subtotal</th><th>Acción</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top: 10px;">
+                        <label>Descuento Aplicado:</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="tipo-descuento" onchange="actualizarTablaCarrito()">
+                                <option value="monto">Monto ($)</option>
+                                <option value="porcentaje">Porcentaje (%)</option>
+                            </select>
+                            <input type="number" step="0.01" id="valor-descuento" value="" placeholder="Valor descuento" oninput="actualizarTablaCarrito()">
+                        </div>
+                    </div>
+
+                    <div class="monto-total">Total: $<span id="total-venta">0.00</span></div>
+
+                    <label>Forma de Pago:</label>
+                    <select id="metodo-pago" onchange="cambiarMetodoPago()">
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Tarjeta">Tarjeta</option>
+                    </select>
+
+                    <div id="contenedor-efectivo">
+                        <input type="number" step="0.01" id="monto-pagado" placeholder="Monto Recibido ($)" value="" oninput="calcularCambio()">
+                        <p style="margin: 5px 0;"><strong>Cambio:</strong> $<span id="monto-cambio">0.00</span></p>
+                    </div>
+
+                    <button type="button" onclick="procesarVenta()" style="margin-top: 10px;">Completar Venta</button>
+                    <button type="button" id="btn-imprimir-ultimo" class="btn-secondary" onclick="visualizarUltimoTicketPDF()" disabled style="margin-top: 5px;">Visualizar PDF Último Ticket</button>
                 </div>
             </div>
-        </div>
 
-        <!-- SECCIÓN: INVENTARIO (Oculta por defecto) -->
-        <div id="seccion-inventario" class="seccion-app hidden bg-white p-6 rounded-lg shadow">
-            <h2 class="text-lg font-semibold mb-4 text-gray-700">Gestión de Inventario</h2>
-            <p class="text-gray-600">Aquí se mostrará el inventario actualizado desde Google Drive.</p>
-        </div>
+            <!-- SECCIÓN 2: CLIENTES -->
+            <div id="sec-clientes" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h2>Catálogo de Clientes</h2>
+                    <form id="form-cliente">
+                        <input type="text" id="cli-nombre" placeholder="Nombre completo o razón social" required>
+                        <input type="text" id="cli-telefono" placeholder="Número telefónico" required>
+                        <button type="submit">Guardar Cliente</button>
+                    </form>
 
-        <!-- SECCIÓN: CONFIGURACIÓN (Oculta por defecto) -->
-        <div id="seccion-configuracion" class="seccion-app hidden bg-white p-6 rounded-lg shadow">
-            <h2 class="text-lg font-semibold mb-4 text-gray-700">Configuración del Sistema</h2>
-            <button onclick="ejecutarAccionProtegida(cerrarCaja)" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium transition">
-                Cerrar Caja (Protegido)
-            </button>
+                    <h3 style="margin-top:20px; font-size: 1rem;">Lista de Clientes</h3>
+                    <div style="max-height: 250px; overflow-y: auto;">
+                        <table id="tabla-clientes">
+                            <thead>
+                                <tr><th>Nombre</th><th>Teléfono</th><th>Acción</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 3: BALANCE -->
+            <div id="sec-balance" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h2>Balance General del Día</h2>
+                    <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Sincronizar Datos de la Nube Ahora</button>
+                    
+                    <div class="corte-resumen">
+                        <p><strong>Total Ingresos del Día:</strong> $<span id="balance-ingresos">0.00</span></p>
+                        <p><strong>Total Costo de Producto:</strong> $<span id="balance-egresos">0.00</span></p>
+                        <hr>
+                        <p style="color: #27ae60; font-size: 1.2rem;"><strong>Ganancia Neta Actual:</strong> $<span id="balance-ganancia">0.00</span></p>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <div class="corte-resumen" style="flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0;">
+                            <h4 style="margin: 0 0 8px 0; color: #166534; font-size: 0.95rem;">🟢 Ganancia con Descuento</h4>
+                            <p style="font-size: 0.9rem; margin: 4px 0;">Ingresos: $<span id="bal-ing-desc">0.00</span></p>
+                            <p style="font-size: 0.9rem; margin: 4px 0;">Costos: $<span id="bal-cos-desc">0.00</span></p>
+                            <p style="font-size: 1rem; color: #166534; margin: 6px 0 0 0;"><strong>Ganancia: $<span id="bal-gan-desc">0.00</span></strong></p>
+                        </div>
+                        <div class="corte-resumen" style="flex: 1; background: #f8fafc; border: 1px solid #cbd5e1;">
+                            <h4 style="margin: 0 0 8px 0; color: #334155; font-size: 0.95rem;">⚪ Ganancia sin Descuento</h4>
+                            <p style="font-size: 0.9rem; margin: 4px 0;">Ingresos: $<span id="bal-ing-normal">0.00</span></p>
+                            <p style="font-size: 0.9rem; margin: 4px 0;">Costos: $<span id="bal-cos-normal">0.00</span></p>
+                            <p style="font-size: 1rem; color: #334155; margin: 6px 0 0 0;"><strong>Ganancia: $<span id="bal-gan-normal">0.00</span></strong></p>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 1rem; margin-top: 20px;">Desglose por Producto Vendido Hoy</h3>
+                    <div style="max-height: 220px; overflow-y: auto;">
+                        <table id="tabla-balance-productos">
+                            <thead>
+                                <tr><th>Producto</th><th>Cant.</th><th>Ingreso Real</th><th>Costo</th><th>Ganancia</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 4: PRODUCTOS -->
+            <div id="sec-productos" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h2>Registro de Productos</h2>
+                    <form id="form-producto">
+                        <input type="text" id="prod-codigo" placeholder="Código de barras / ID" required oninput="cargarDatosProductoEnFormulario()">
+                        <input type="text" id="prod-nombre" placeholder="Nombre del producto" required>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="number" step="0.01" id="prod-costo" placeholder="Costo ($)" required>
+                            <input type="number" step="0.01" id="prod-precio" placeholder="Precio ($)" required>
+                        </div>
+                        <input type="number" id="prod-stock" placeholder="Stock inicial" required>
+                        
+                        <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto:</label>
+                        <div id="contenedor-preview-imagen" style="margin-bottom: 5px;"></div>
+                        <input type="file" id="prod-imagen" accept="image/*">
+
+                        <button type="submit">Guardar Producto</button>
+                    </form>
+
+                    <div class="inversion-box">
+                        💰 Inversión Total en Inventario: $<span id="inversion-total-inventario">0.00</span>
+                    </div>
+
+                    <h3 style="margin-top:20px; font-size: 1rem;">Inventario Actual</h3>
+                    <div style="max-height: 250px; overflow-y: auto;">
+                        <table id="tabla-productos">
+                            <thead>
+                                <tr><th>Img</th><th>Código</th><th>Prod.</th><th>Costo</th><th>Precio</th><th>Stock</th><th>Acción</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 5: CORTE -->
+            <div id="sec-corte" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h2>Corte de Caja del Día</h2>
+                    <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Sincronizar con la Nube</button>
+                    
+                    <div class="corte-resumen">
+                        <p><strong>Ventas Realizadas Hoy:</strong> <span id="cant-ventas">0</span></p>
+                        <p><strong>Ingresos Brutos:</strong> $<span id="total-ingresos">0.00</span></p>
+                        <p><strong>Costo Mercancía:</strong> $<span id="total-costos">0.00</span></p>
+                        <hr>
+                        <p style="color: #27ae60; font-size: 1.2rem;"><strong>Ganancia Neta:</strong> $<span id="total-ganancia">0.00</span></p>
+                    </div>
+
+                    <h3 style="font-size: 1rem;">Detalle de Ventas</h3>
+                    <div style="max-height: 180px; overflow-y: auto;">
+                        <table id="tabla-historial">
+                            <thead>
+                                <tr><th>Fecha/Cliente</th><th>Total</th><th>Pago</th><th>Acción</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <br>
+                    <button type="button" class="btn-danger" onclick="reiniciarDia()">Cerrar Caja (Corte Diario)</button>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 6: MENSUAL -->
+            <div id="sec-mensual" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h2>Historial Mensual</h2>
+                    <label>Seleccionar Mes:</label>
+                    <select id="select-mes-filtro" onchange="actualizarVistaMensual()"></select>
+
+                    <div class="corte-resumen" style="background-color: #f0fdf4;">
+                        <p><strong>Días Registrados:</strong> <span id="mes-dias">0</span></p>
+                        <p><strong>Venta Total del Mes:</strong> $<span id="mes-total-ingresos">0.00</span></p>
+                        <hr>
+                        <p style="color: #166534; font-size: 1.25rem;"><strong>Ganancia Neta del Mes:</strong> $<span id="mes-total-ganancias">0.00</span></p>
+                    </div>
+
+                    <h3 style="font-size: 1rem; margin-top: 15px;">Cortes Diarios</h3>
+                    <div style="max-height: 220px; overflow-y: auto;">
+                        <table id="tabla-cortes-mensuales">
+                            <thead>
+                                <tr><th>Fecha</th><th>Ventas</th><th>Total ($)</th><th>Ganancia ($)</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 7: SINCRONIZACIÓN -->
+            <div id="sec-nube" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h2>Conexión con Google Sheets</h2>
+                    <p style="font-size: 0.9rem; color: #555;">
+                        Pega la URL de tu Apps Script y tu Clave Secreta. La app se sincronizará automáticamente en cada cambio.
+                    </p>
+
+                    <label>URL de Google Apps Script:</label>
+                    <input type="text" id="nube-database-url" placeholder="https://script.google.com/macros/s/.../exec" oninput="guardarCredencialesNube()">
+                    
+                    <label>Clave o Token Secreto:</label>
+                    <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123" oninput="guardarCredencialesNube()">
+
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button type="button" class="btn-cloud" onclick="subirALaNube()">☁️ Sincronizar Manualmente Ahora</button>
+                        <button type="button" class="btn-info" onclick="descargarDeLaNube()">📥 Descargar Datos Forzados</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 8: SEGURIDAD -->
+            <div id="sec-reiniciar" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h2>🔒 Seguridad Local del Dispositivo</h2>
+                    <div id="contenedor-config-nip" style="background: #f8fafc; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                        <h3 style="font-size: 0.95rem; margin-top:0;">NIP de Bloqueo Local</h3>
+                        <p id="lbl-estado-nip" style="font-size: 0.85rem; color: #e74c3c;">Estado: NIP no configurado.</p>
+                        <input type="password" id="nuevo-nip" placeholder="Crear o cambiar NIP">
+                        <button type="button" class="btn-info" onclick="guardarNIP()">Guardar NIP</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        const WEB_APP_URL = "TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI";
+        let db;
+        let productos = {};
+        let clientes = {};
+        let ventasDelDia = [];
+        let historialMensual = [];
+        let ultimaVentaRealizada = null;
+        let carrito = [];
+        let nipSeguridad = "";
 
-        // Función para cambiar de sección y actualizar automáticamente al cambiar
-        function cambiarSeccion(nombreSeccion) {
-            // Ocultar todas las secciones
-            document.querySelectorAll('.seccion-app').forEach(el => el.classList.add('hidden'));
-            
-            // Mostrar la sección seleccionada
-            document.getElementById(`seccion-${nombreSeccion}`).classList.remove('hidden');
+        // Funciones del indicador visual flotante
+        const statusMessage = document.getElementById('status-message');
 
-            // Actualizar estilos de los botones de navegación opcionalmente
-            console.changedSection = nombreSeccion;
-
-            // Disparar la sincronización inmediatamente al cambiar de sección
-            sincronizarDatos();
+        function mostrarEstado(mensaje = "Sincronizando datos...", conSpinner = true) {
+            const contenido = conSpinner ? `<span class="spinner"></span> ${mensaje}` : mensaje;
+            statusMessage.innerHTML = contenido;
+            statusMessage.classList.remove('status-hidden');
+            statusMessage.classList.add('status-visible');
         }
 
-        // Función de sincronización con Google Drive
-        async function sincronizarDatos() {
-            try {
-                document.getElementById("estado-conexion").innerText = "Actualizando datos...";
-                const response = await fetch(`${WEB_APP_URL}?accion=obtenerEstado`);
-                const resultado = await response.json();
-                
-                if (resultado.exito) {
-                    actualizarTimestamp();
-                    document.getElementById("estado-conexion").innerText = "Sincronizado con Drive correctamente.";
-                }
-            } catch (error) {
-                console.error("Error en la sincronización:", error);
-                document.getElementById("estado-conexion").innerText = "Error al actualizar al cambiar de sección.";
-            }
+        function ocultarEstado(retraso = 2000) {
+            setTimeout(() => {
+                statusMessage.classList.remove('status-visible');
+                statusMessage.classList.add('status-hidden');
+            }, retraso);
         }
 
-        function actualizarTimestamp() {
-            const ahora = new Date();
-            document.getElementById("timestamp-sync").innerText = ahora.toLocaleTimeString();
-        }
-
-        // Sistema de Seguridad por NIP
-        async function verificarNIPOperacion(nipIngresado) {
-            try {
-                const response = await fetch(`${WEB_APP_URL}?accion=verificarNIP&nip=${nipIngresado}`);
-                const resultado = await response.json();
-                return resultado.autorizado;
-            } catch (error) {
-                console.error("Error al validar el NIP:", error);
-                return false;
-            }
-        }
-
-        async function ejecutarAccionProtegida(accionCallback) {
-            const nip = prompt("Ingresa el NIP de autorización de gerente:");
-            if (!nip) return;
-
-            const autorizado = await verificarNIPOperacion(nip);
-            if (autorizado) {
-                await accionCallback();
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('open');
             } else {
-                alert("NIP incorrecto o sin permisos suficientes.");
+                sidebar.classList.toggle('collapsed');
             }
         }
 
-        async function cerrarCaja() {
-            alert("Acción autorizada: Caja cerrada correctamente.");
+        const request = indexedDB.open('TranzaksSheetDB', 2);
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            cargarDatosDesdeDB();
+        };
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains('almacen')) db.createObjectStore('almacen');
+        };
+
+        function guardarEnDB(clave, valor, callback) {
+            if (!db) return;
+            const transaction = db.transaction(['almacen'], 'readwrite');
+            const store = transaction.objectStore('almacen');
+            const req = store.put(valor, clave);
+            req.onsuccess = () => { if (callback) callback(); };
         }
 
-        // Procesamiento de Venta
-        async function procesarVentaTranzaks(carritoItems, descuentoGlobal = 0) {
-            let totalVenta = 0;
-            const itemsProcesados = carritoItems.map(item => {
-                const precioConDescuento = item.precioUnitario - (item.descuentoUnitario || 0);
-                const subtotal = precioConDescuento * item.cantidad;
-                totalVenta += subtotal;
-                return { ...item, precioConDescuento, subtotal };
+        function cargarDatosDesdeDB() {
+            const transaction = db.transaction(['almacen'], 'readonly');
+            const store = transaction.objectStore('almacen');
+
+            store.get('productos').onsuccess = (e) => { productos = e.target.result || {}; actualizarTablaProductos(); actualizarListaSugerencias(); };
+            store.get('clientes').onsuccess = (e) => { clientes = e.target.result || {}; actualizarTablaClientes(); actualizarSelectClientes(); };
+            store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); };
+            store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; };
+            store.get('nubeUrl').onsuccess = (e) => { 
+                if(e.target.result) {
+                    document.getElementById('nube-database-url').value = e.target.result;
+                    // Auto-sincronizar al iniciar la aplicación de forma inmediata
+                    setTimeout(() => descargarDeLaNube(true), 300);
+                }
+            };
+            store.get('nubeToken').onsuccess = (e) => { if(e.target.result) document.getElementById('nube-token').value = e.target.result; };
+            store.get('nipSeguridad').onsuccess = (e) => { nipSeguridad = e.target.result || ""; actualizarInterfazNIP(); };
+        }
+
+        function guardarCredencialesNube() {
+            const url = document.getElementById('nube-database-url').value.trim();
+            const token = document.getElementById('nube-token').value.trim();
+            guardarEnDB('nubeUrl', url);
+            guardarEnDB('nubeToken', token);
+        }
+
+        function actualizarInterfazNIP() {
+            const lbl = document.getElementById('lbl-estado-nip');
+            if (nipSeguridad) {
+                lbl.innerText = "Estado: NIP configurado correctamente.";
+                lbl.style.color = "#27ae60";
+            } else {
+                lbl.innerText = "Estado: NIP no configurado.";
+                lbl.style.color = "#e74c3c";
+            }
+        }
+
+        function guardarNIP() {
+            const val = document.getElementById('nuevo-nip').value.trim();
+            if (!val) return alert('Escribe un NIP válido.');
+            nipSeguridad = val;
+            guardarEnDB('nipSeguridad', nipSeguridad, () => {
+                actualizarInterfazNIP();
+                document.getElementById('nuevo-nip').value = '';
+                alert('¡NIP guardado con éxito!');
+            });
+        }
+
+        function cambiarPestana(idSeccion, boton) {
+            document.querySelectorAll('.tab-content').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            const seccionActiva = document.getElementById(idSeccion);
+            seccionActiva.style.display = 'block';
+            seccionActiva.classList.add('active');
+            boton.classList.add('active');
+
+            if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+            if (idSeccion === 'sec-balance') actualizarVistaBalance();
+            else if (idSeccion === 'sec-corte') actualizarVistaCorte();
+            else if (idSeccion === 'sec-mensual') { cargarOpcionesMeses(); actualizarVistaMensual(); }
+        }
+
+        function subirALaNube(silencioso = false) {
+            const url = document.getElementById('nube-database-url').value.trim();
+            const token = document.getElementById('nube-token').value.trim();
+            if (!url) return; 
+            
+            guardarCredencialesNube();
+            mostrarEstado("Subiendo datos a Google Sheets...");
+
+            const datos = { token, productos, clientes, ventasDelDia, historialMensual };
+            return fetch(url, {
+                method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(datos)
+            })
+            .then(res => res.json())
+            .then(response => {
+                if(response.status === "success") {
+                    mostrarEstado("¡Datos subidos con éxito! ✓", false);
+                    ocultarEstado(2000);
+                    if (!silencioso && !document.getElementById('status-message').classList.contains('status-visible')) {
+                        // Opcional si se requiere alerta extra
+                    }
+                } else {
+                    mostrarEstado("Error: " + (response.message || 'Token incorrecto'), false);
+                    ocultarEstado(3000);
+                    if (!silencioso) alert('Error: ' + (response.message || 'Token incorrecto'));
+                }
+            })
+            .catch(err => {
+                mostrarEstado("Error de conexión con Apps Script", false);
+                ocultarEstado(3000);
+                if (!silencioso) alert('Error de conexión con Apps Script: ' + err);
+            });
+        }
+
+        function descargarDeLaNube(silencioso = false) {
+            const url = document.getElementById('nube-database-url').value.trim();
+            const token = document.getElementById('nube-token').value.trim();
+            if (!url) return;
+            
+            guardarCredencialesNube();
+            mostrarEstado("Sincronizando desde la nube...");
+
+            fetch(`${url}?token=${encodeURIComponent(token)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "error") {
+                    mostrarEstado("Error de seguridad: " + data.message, false);
+                    ocultarEstado(3000);
+                    if (!silencioso) alert('Error de seguridad: ' + data.message);
+                    return;
+                }
+                if (!data || Object.keys(data).length === 0) {
+                    ocultarEstado(1000);
+                    return;
+                }
+                
+                productos = data.productos || {};
+                clientes = data.clientes || {};
+                ventasDelDia = data.ventasDelDia || [];
+                historialMensual = data.historialMensual || [];
+
+                guardarEnDB('productos', productos);
+                guardarEnDB('clientes', clientes);
+                guardarEnDB('ventasDelDia', ventasDelDia);
+                guardarEnDB('historialMensual', historialMensual);
+
+                actualizarTablaProductos();
+                actualizarListaSugerencias();
+                actualizarTablaClientes();
+                actualizarSelectClientes();
+                actualizarVistaCorte();
+                actualizarVistaBalance();
+
+                mostrarEstado("¡Sincronizado correctamente! ✓", false);
+                ocultarEstado(2000);
+                if (!silencioso) alert('🔄 ¡Datos descargados y actualizados desde la nube!');
+            })
+            .catch(err => {
+                mostrarEstado("Error al descargar datos", false);
+                ocultarEstado(3000);
+                if (!silencioso) alert('Error al descargar: ' + err);
+            });
+        }
+
+        // CLIENTES
+        document.getElementById('form-cliente').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('cli-nombre').value.trim();
+            const telefono = document.getElementById('cli-telefono').value.trim();
+            if (!nombre || !telefono) return;
+            clientes[nombre] = { telefono };
+            guardarEnDB('clientes', clientes);
+            actualizarTablaClientes();
+            actualizarSelectClientes();
+            e.target.reset();
+            subirALaNube(true);
+        });
+
+        function eliminarCliente(nombre) {
+            if (confirm(`¿Eliminar al cliente "${nombre}"?`)) {
+                delete clientes[nombre];
+                guardarEnDB('clientes', clientes);
+                actualizarTablaClientes();
+                actualizarSelectClientes();
+                subirALaNube(true);
+            }
+        }
+
+        function actualizarTablaClientes() {
+            const tbody = document.querySelector('#tabla-clientes tbody');
+            tbody.innerHTML = '';
+            for (let nombre in clientes) {
+                tbody.innerHTML += `<tr><td>${nombre}</td><td>${clientes[nombre].telefono}</td><td><button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarCliente('${nombre}')">🗑️</button></td></tr>`;
+            }
+        }
+
+        function actualizarSelectClientes() {
+            const select = document.getElementById('venta-cliente');
+            select.innerHTML = '<option value="Público General">Público General</option>';
+            for (let nombre in clientes) select.innerHTML += `<option value="${nombre}">${nombre}</option>`;
+        }
+
+        // PRODUCTOS
+        function cargarDatosProductoEnFormulario() {
+            const codigo = document.getElementById('prod-codigo').value.trim();
+            const contenedorPreview = document.getElementById('contenedor-preview-imagen');
+            contenedorPreview.innerHTML = '';
+
+            if (productos[codigo]) {
+                const p = productos[codigo];
+                document.getElementById('prod-nombre').value = p.nombre;
+                document.getElementById('prod-costo').value = p.costo;
+                document.getElementById('prod-precio').value = p.precio;
+                document.getElementById('prod-stock').value = p.stock;
+
+                if (p.imagen) {
+                    contenedorPreview.innerHTML = `<span style="font-size: 0.8rem; color: #555;">Imagen actual:</span><img src="${p.imagen}" class="img-preview-form">`;
+                }
+            } else {
+                document.getElementById('prod-nombre').value = '';
+                document.getElementById('prod-costo').value = '';
+                document.getElementById('prod-precio').value = '';
+                document.getElementById('prod-stock').value = '';
+            }
+        }
+
+        document.getElementById('form-producto').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const codigo = document.getElementById('prod-codigo').value.trim();
+            const nombre = document.getElementById('prod-nombre').value.trim();
+            const costo = parseFloat(document.getElementById('prod-costo').value);
+            const precio = parseFloat(document.getElementById('prod-precio').value);
+            const stock = parseInt(document.getElementById('prod-stock').value);
+            const inputImagen = document.getElementById('prod-imagen');
+            let imagenBase64 = productos[codigo] ? productos[codigo].imagen : '';
+
+            if (inputImagen.files && inputImagen.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    productos[codigo] = { nombre, costo, precio, stock, imagen: ev.target.result };
+                    finalizarGuardadoProducto(e.target);
+                };
+                reader.readAsDataURL(inputImagen.files[0]);
+            } else {
+                productos[codigo] = { nombre, costo, precio, stock, imagen: imagenBase64 };
+                finalizarGuardadoProducto(e.target);
+            }
+        });
+
+        function finalizarGuardadoProducto(form) {
+            guardarEnDB('productos', productos);
+            actualizarTablaProductos();
+            actualizarListaSugerencias();
+            form.reset();
+            document.getElementById('contenedor-preview-imagen').innerHTML = '';
+            subirALaNube(true);
+        }
+
+        function eliminarProducto(codigo) {
+            if (confirm('¿Eliminar producto?')) {
+                delete productos[codigo];
+                guardarEnDB('productos', productos);
+                actualizarTablaProductos();
+                actualizarListaSugerencias();
+                subirALaNube(true);
+            }
+        }
+
+        function actualizarStockDirecto(codigo, inputEl) {
+            const p = productos[codigo];
+            if (!p) return;
+            const nuevoStock = parseInt(inputEl.value);
+            if (isNaN(nuevoStock) || nuevoStock < 0) {
+                alert('Cantidad de stock inválida.');
+                inputEl.value = p.stock;
+                return;
+            }
+            
+            p.stock = nuevoStock;
+            guardarEnDB('productos', productos);
+            actualizarTablaProductos();
+            subirALaNube(true);
+        }
+
+        function actualizarTablaProductos() {
+            const tbody = document.querySelector('#tabla-productos tbody');
+            tbody.innerHTML = '';
+            let inversionTotal = 0;
+            for (let cod in productos) {
+                const p = productos[cod];
+                inversionTotal += (p.costo * p.stock);
+                const img = p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img';
+                tbody.innerHTML += `<tr>
+                    <td>${img}</td>
+                    <td>${cod}</td>
+                    <td>${p.nombre}</td>
+                    <td>$${p.costo.toFixed(2)}</td>
+                    <td>$${p.precio.toFixed(2)}</td>
+                    <td><input type="number" class="input-stock-table" value="${p.stock}" min="0" onchange="actualizarStockDirecto('${cod}', this)"></td>
+                    <td>
+                        <button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarProducto('${cod}')" title="Eliminar Producto">🗑️</button>
+                    </td>
+                </tr>`;
+            }
+            document.getElementById('inversion-total-inventario').innerText = inversionTotal.toFixed(2);
+        }
+
+        function actualizarListaSugerencias() {
+            const datalist = document.getElementById('lista-sugerencias-productos');
+            datalist.innerHTML = '';
+            for (let cod in productos) datalist.innerHTML += `<option value="${productos[cod].nombre}">`;
+        }
+
+        // VENTAS Y CARRITO
+        document.getElementById('form-venta').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const termino = document.getElementById('venta-busqueda').value.trim().toLowerCase();
+            let codigoEncontrado = null;
+            if (productos[termino]) codigoEncontrado = termino;
+            else {
+                for (let cod in productos) {
+                    if (productos[cod].nombre.toLowerCase() === termino) codigoEncontrado = cod;
+                }
+            }
+            if (!codigoEncontrado) return alert('Producto no encontrado.');
+            const p = productos[codigoEncontrado];
+            if (p.stock <= 0) return alert('Sin stock disponible');
+
+            const enCarrito = carrito.find(i => i.codigo === codigoEncontrado);
+            if (enCarrito) {
+                if (enCarrito.cantidad + 1 > p.stock) return alert('Stock insuficiente');
+                enCarrito.cantidad++;
+            } else {
+                carrito.push({ codigo: codigoEncontrado, nombre: p.nombre, precioOriginal: p.precio, precio: p.precio, costo: p.costo, cantidad: 1 });
+            }
+            document.getElementById('venta-busqueda').value = '';
+            actualizarTablaCarrito();
+        });
+
+        function cambiarCantidadCarrito(index, inputEl) {
+            const nuevoVal = parseInt(inputEl.value);
+            const item = carrito[index];
+            const p = productos[item.codigo];
+
+            if (isNaN(nuevoVal) || nuevoVal <= 0) {
+                alert('Ingresa una cantidad válida mayor a 0.');
+                inputEl.value = item.cantidad;
+                return;
+            }
+
+            if (p && nuevoVal > p.stock) {
+                alert(`Stock insuficiente. Stock disponible: ${p.stock}`);
+                inputEl.value = item.cantidad;
+                return;
+            }
+
+            item.cantidad = nuevoVal;
+            actualizarTablaCarrito();
+        }
+
+        function actualizarTablaCarrito() {
+            const tbody = document.querySelector('#tabla-carrito tbody');
+            tbody.innerHTML = '';
+            let subtotalGeneral = 0;
+            
+            carrito.forEach(item => {
+                item.precio = item.precioOriginal;
+                let subtotal = item.precio * item.cantidad;
+                subtotalGeneral += subtotal;
             });
 
-            const totalFinal = totalVenta - descuentoGlobal;
-            const datosVenta = {
-                tipo: "registrarVenta",
-                items: itemsProcesados,
-                total: totalFinal,
-                fecha: new Date().toISOString()
+            const tipoDesc = document.getElementById('tipo-descuento').value;
+            const valorDescInput = document.getElementById('valor-descuento').value;
+            let valorDesc = valorDescInput === "" ? 0 : parseFloat(valorDescInput) || 0;
+            let descuentoCalculado = 0;
+
+            if (tipoDesc === 'monto') {
+                descuentoCalculado = valorDesc;
+            } else {
+                descuentoCalculado = subtotalGeneral * (valorDesc / 100);
+            }
+
+            let factorDescuento = subtotalGeneral > 0 ? (subtotalGeneral - Math.min(descuentoCalculado, subtotalGeneral)) / subtotalGeneral : 1;
+
+            carrito.forEach((item, index) => {
+                let precioConDescuentoUnitario = item.precioOriginal * factorDescuento;
+                let subtotalRealItem = precioConDescuentoUnitario * item.cantidad;
+                
+                tbody.innerHTML += `<tr>
+                    <td>${item.nombre}</td>
+                    <td><input type="number" class="input-carrito-cant" value="${item.cantidad}" min="1" onchange="cambiarCantidadCarrito(${index}, this)"></td>
+                    <td>$${subtotalRealItem.toFixed(2)}</td>
+                    <td><button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarDelCarrito(${index})">🗑️</button></td>
+                </tr>`;
+            });
+
+            let totalFinal = subtotalGeneral - descuentoCalculado;
+            if (totalFinal < 0) totalFinal = 0;
+
+            document.getElementById('total-venta').innerText = totalFinal.toFixed(2);
+            calcularCambio();
+        }
+
+        function eliminarDelCarrito(index) {
+            carrito.splice(index, 1);
+            actualizarTablaCarrito();
+        }
+
+        function cambiarMetodoPago() {
+            const metodo = document.getElementById('metodo-pago').value;
+            document.getElementById('contenedor-efectivo').style.display = metodo === 'Efectivo' ? 'block' : 'none';
+        }
+
+        function calcularCambio() {
+            const total = parseFloat(document.getElementById('total-venta').innerText) || 0;
+            const pagadoInput = document.getElementById('monto-pagado').value;
+            if (pagadoInput === "") {
+                document.getElementById('monto-cambio').innerText = '0.00';
+                return;
+            }
+            const pagado = parseFloat(pagadoInput) || 0;
+            const cambio = pagado - total;
+            document.getElementById('monto-cambio').innerText = cambio >= 0 ? cambio.toFixed(2) : '0.00';
+        }
+
+        function procesarVenta() {
+            if (carrito.length === 0) return alert('El carrito está vacío');
+            const total = parseFloat(document.getElementById('total-venta').innerText) || 0;
+            const costoTotal = carrito.reduce((acc, i) => acc + (i.costo * i.cantidad), 0);
+            const metodo = document.getElementById('metodo-pago').value;
+            const cliente = document.getElementById('venta-cliente').value;
+
+            if (metodo === 'Efectivo') {
+                const pagadoInput = document.getElementById('monto-pagado').value;
+                if (pagadoInput === "") return alert('Ingresa el monto con el que paga el cliente');
+                const pagado = parseFloat(pagadoInput) || 0;
+                if (pagado < total) return alert('El monto pagado es menor al total');
+            }
+
+            let subtotalGeneral = carrito.reduce((acc, i) => acc + (i.precioOriginal * i.cantidad), 0);
+            const tipoDesc = document.getElementById('tipo-descuento').value;
+            const valorDescInput = document.getElementById('valor-descuento').value;
+            let valorDesc = valorDescInput === "" ? 0 : parseFloat(valorDescInput) || 0;
+            let descuentoCalculado = tipoDesc === 'monto' ? valorDesc : subtotalGeneral * (valorDesc / 100);
+            let factorDescuento = subtotalGeneral > 0 ? (subtotalGeneral - Math.min(descuentoCalculado, subtotalGeneral)) / subtotalGeneral : 1;
+
+            let tieneDescuentoAplicado = descuentoCalculado > 0;
+
+            let itemsParaVenta = carrito.map(item => ({
+                codigo: item.codigo,
+                nombre: item.nombre,
+                precio: item.precioOriginal * factorDescuento,
+                precioOriginalUnitario: item.precioOriginal,
+                costo: item.costo,
+                cantidad: item.cantidad
+            }));
+
+            carrito.forEach(item => {
+                if (productos[item.codigo]) {
+                    productos[item.codigo].stock -= item.cantidad;
+                }
+            });
+
+            const venta = {
+                fecha: new Date().toLocaleString(),
+                cliente,
+                total,
+                costo: costoTotal,
+                metodo,
+                conDescuento: tieneDescuentoAplicado,
+                items: itemsParaVenta
             };
 
-            try {
-                const response = await fetch(WEB_APP_URL, {
-                    method: "POST",
-                    body: JSON.stringify(datosVenta)
-                });
-                const resultado = await response.json();
+            ventasDelDia.push(venta);
+            ultimaVentaRealizada = venta;
+
+            guardarEnDB('productos', productos);
+            guardarEnDB('ventasDelDia', ventasDelDia);
+
+            carrito = [];
+            document.getElementById('valor-descuento').value = "";
+            document.getElementById('monto-pagado').value = "";
+            actualizarTablaCarrito();
+            actualizarTablaProductos();
+            actualizarVistaCorte();
+            actualizarVistaBalance();
+
+            document.getElementById('btn-imprimir-ultimo').disabled = false;
+            subirALaNube(true);
+            alert('¡Venta completada y sincronizada con éxito!');
+        }
+
+        function actualizarVistaCorte() {
+            const tbody = document.querySelector('#tabla-historial tbody');
+            tbody.innerHTML = '';
+            let totalIngresos = 0;
+            let totalCostos = 0;
+            ventasDelDia.forEach((v, index) => {
+                totalIngresos += v.total;
+                totalCostos += v.costo;
+                tbody.innerHTML += `<tr><td>${v.fecha}<br><small>${v.cliente}</small></td><td>$${v.total.toFixed(2)}</td><td>${v.metodo}</td><td><button type="button" class="btn-secondary" style="padding:2px 6px; width:auto;" onclick="verTicketDetalle(${index})">📄</button> <button type="button" class="btn-danger" style="padding:2px 6px; width:auto;" onclick="eliminarVentaDelCorte(${index})">🗑️</button></td></tr>`;
+            });
+            document.getElementById('cant-ventas').innerText = ventasDelDia.length;
+            document.getElementById('total-ingresos').innerText = totalIngresos.toFixed(2);
+            document.getElementById('total-costos').innerText = totalCostos.toFixed(2);
+            document.getElementById('total-ganancia').innerText = (totalIngresos - totalCostos).toFixed(2);
+        }
+
+        function eliminarVentaDelCorte(index) {
+            if (confirm('¿Estás seguro de eliminar esta venta? Los productos se devolverán al inventario.')) {
+                const ventaEliminada = ventasDelDia[index];
                 
-                if (resultado.exito) {
-                    alert("¡Venta registrada y guardada en Google Drive!");
-                    sincronizarDatos();
-                } else {
-                    alert("Hubo un problema al registrar la venta.");
+                if (ventaEliminada && ventaEliminada.items) {
+                    ventaEliminada.items.forEach(i => {
+                        if (productos[i.codigo]) {
+                            productos[i.codigo].stock += i.cantidad;
+                        }
+                    });
                 }
-            } catch (error) {
-                console.error("Error de red:", error);
-                alert("Error al conectar con Google Drive.");
+
+                ventasDelDia.splice(index, 1);
+
+                guardarEnDB('productos', productos);
+                guardarEnDB('ventasDelDia', ventasDelDia);
+
+                actualizarTablaProductos();
+                actualizarVistaCorte();
+                actualizarVistaBalance();
+                subirALaNube(true);
+                alert('Venta eliminada y stock devuelto.');
             }
         }
 
-        async function simularVenta() {
-            const carritoEjemplo = [
-                { id: "producto_1", nombre: "Artículo A", precioUnitario: 100, descuentoUnitario: 10, cantidad: 2 },
-                { id: "producto_2", nombre: "Artículo B", precioUnitario: 50, descuentoUnitario: 0, cantidad: 1 }
-            ];
-            await procesarVentaTranzaks(carritoEjemplo, 5);
+        function actualizarVistaBalance() {
+            let totalIngresos = 0;
+            let totalCosto = 0;
+            
+            let ingDesc = 0, cosDesc = 0;
+            let ingNormal = 0, cosNormal = 0;
+
+            let productosVendidosMap = {};
+
+            ventasDelDia.forEach(v => {
+                totalIngresos += v.total;
+                totalCosto += v.costo;
+
+                let ventaIngreso = v.total;
+                let ventaCosto = v.costo;
+
+                if (v.conDescuento) {
+                    ingDesc += ventaIngreso;
+                    cosDesc += ventaCosto;
+                } else {
+                    ingNormal += ventaIngreso;
+                    cosNormal += ventaCosto;
+                }
+
+                v.items.forEach(i => {
+                    if (!productosVendidosMap[i.nombre]) {
+                        productosVendidosMap[i.nombre] = { cant: 0, ingreso: 0, costo: 0 };
+                    }
+                    productosVendidosMap[i.nombre].cant += i.cantidad;
+                    productosVendidosMap[i.nombre].ingreso += (i.precio * i.cantidad);
+                    productosVendidosMap[i.nombre].costo += (i.costo * i.cantidad);
+                });
+            });
+
+            document.getElementById('balance-ingresos').innerText = totalIngresos.toFixed(2);
+            document.getElementById('balance-egresos').innerText = totalCosto.toFixed(2);
+            document.getElementById('balance-ganancia').innerText = (totalIngresos - totalCosto).toFixed(2);
+
+            document.getElementById('bal-ing-desc').innerText = ingDesc.toFixed(2);
+            document.getElementById('bal-cos-desc').innerText = cosDesc.toFixed(2);
+            document.getElementById('bal-gan-desc').innerText = (ingDesc - cosDesc).toFixed(2);
+
+            document.getElementById('bal-ing-normal').innerText = ingNormal.toFixed(2);
+            document.getElementById('bal-cos-normal').innerText = cosNormal.toFixed(2);
+            document.getElementById('bal-gan-normal').innerText = (ingNormal - cosNormal).toFixed(2);
+
+            const tbody = document.querySelector('#tabla-balance-productos tbody');
+            tbody.innerHTML = '';
+            for (let prod in productosVendidosMap) {
+                const p = productosVendidosMap[prod];
+                const gananciaProd = p.ingreso - p.costo;
+                tbody.innerHTML += `<tr><td>${prod}</td><td>${p.cant}</td><td>$${p.ingreso.toFixed(2)}</td><td>$${p.costo.toFixed(2)}</td><td>$${gananciaProd.toFixed(2)}</td></tr>`;
+            }
+        }
+
+        function reiniciarDia() {
+            if (ventasDelDia.length === 0) return alert('No hay ventas registradas hoy para cerrar.');
+            if (confirm('¿Estás seguro de cerrar caja? Esto archivará el día actual en el historial mensual.')) {
+                const fechaHoy = new Date().toISOString().split('T')[0];
+                const totalVentasDia = ventasDelDia.reduce((acc, v) => acc + v.total, 0);
+                const gananciaDia = ventasDelDia.reduce((acc, v) => acc + (v.total - v.costo), 0);
+
+                historialMensual.push({
+                    fecha: fechaHoy,
+                    ventasCount: ventasDelDia.length,
+                    total: totalVentasDia,
+                    ganancia: gananciaDia,
+                    detalleVentas: [...ventasDelDia]
+                });
+
+                ventasDelDia = [];
+                guardarEnDB('ventasDelDia', ventasDelDia);
+                guardarEnDB('historialMensual', historialMensual);
+
+                actualizarVistaCorte();
+                actualizarVistaBalance();
+                subirALaNube(true);
+                alert('Caja cerrada y respaldada.');
+            }
+        }
+
+        function cargarOpcionesMeses() {
+            const select = document.getElementById('select-mes-filtro');
+            select.innerHTML = '';
+            const mesesMap = {};
+            historialMensual.forEach(h => {
+                const mesAnio = h.fecha.substring(0, 7);
+                mesesMap[mesAnio] = true;
+            });
+            for (let mes in mesesMap) {
+                select.innerHTML += `<option value="${mes}">${mes}</option>`;
+            }
+        }
+
+        function actualizarVistaMensual() {
+            const mesSeleccionado = document.getElementById('select-mes-filtro').value;
+            const tbody = document.querySelector('#tabla-cortes-mensuales tbody');
+            tbody.innerHTML = '';
+            let diasCount = 0;
+            let mesIngresos = 0;
+            let mesGanancias = 0;
+
+            historialMensual.forEach(h => {
+                if (h.fecha.startsWith(mesSeleccionado)) {
+                    diasCount++;
+                    mesIngresos += h.total;
+                    mesGanancias += h.ganancia;
+                    tbody.innerHTML += `<tr><td>${h.fecha}</td><td>${h.ventasCount}</td><td>$${h.total.toFixed(2)}</td><td>$${h.ganancia.toFixed(2)}</td></tr>`;
+                }
+            });
+
+            document.getElementById('mes-dias').innerText = diasCount;
+            document.getElementById('mes-total-ingresos').innerText = mesIngresos.toFixed(2);
+            document.getElementById('mes-total-ganancias').innerText = mesGanancias.toFixed(2);
+        }
+
+        function visualizarUltimoTicketPDF() {
+            if (!ultimaVentaRealizada) return alert('No hay ticket reciente.');
+            generarPDFTicket(ultimaVentaRealizada);
+        }
+
+        function verTicketDetalle(index) {
+            generarPDFTicket(ventasDelDia[index]);
+        }
+
+        function generarPDFTicket(venta) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: [80, 150] });
+            
+            doc.setFont("Helvetica", "bold");
+            doc.setFontSize(12);
+            doc.text("TRANZAKS", 40, 10, { align: "center" });
+            
+            doc.setFontSize(8);
+            doc.setFont("Helvetica", "normal");
+            doc.text("Punto de Venta Multi-dispositivo", 40, 15, { align: "center" });
+            doc.text(`Fecha: ${venta.fecha}`, 5, 22);
+            doc.text(`Cliente: ${venta.cliente}`, 5, 26);
+            doc.text(`Pago: ${venta.metodo}`, 5, 30);
+            
+            doc.line(5, 33, 75, 33);
+            
+            let y = 38;
+            doc.setFont("Helvetica", "bold");
+            doc.text("Cant / Producto", 5, y);
+            doc.text("Subtotal", 60, y);
+            y += 5;
+            
+            doc.setFont("Helvetica", "normal");
+            venta.items.forEach(i => {
+                doc.text(`${i.cantidad}x ${i.nombre}`, 5, y);
+                doc.text(`$${(i.precio * i.cantidad).toFixed(2)}`, 60, y);
+                y += 5;
+            });
+            
+            doc.line(5, y + 2, 75, y + 2);
+            y += 7;
+            
+            doc.setFont("Helvetica", "bold");
+            doc.text(`TOTAL: $${venta.total.toFixed(2)}`, 75, y, { align: "right" });
+            
+            window.open(doc.output('bloburl'), '_blank');
         }
     </script>
 </body>

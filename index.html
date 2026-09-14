@@ -340,7 +340,7 @@
         .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
         .sync-indicator { font-size: 0.8rem; color: #27ae60; font-weight: bold; text-align: right; margin-bottom: 5px; }
 
-        #modal-ticket {
+        #modal-ticket, #modal-precio-especial {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -349,7 +349,7 @@
             justify-content: center;
             align-items: center;
         }
-        .ticket-modal-content {
+        .ticket-modal-content, .precio-modal-content {
             background: #fff;
             padding: 20px;
             border-radius: 8px;
@@ -357,9 +357,9 @@
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            color: #000;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            color: #333;
         }
 
         @media (max-width: 768px) {
@@ -418,10 +418,26 @@
         <div class="splash-text">¡Hola! Preparando tu sistema...</div>
     </div>
 
+    <!-- MODAL TICKET -->
     <div id="modal-ticket">
-        <div class="ticket-modal-content">
+        <div class="ticket-modal-content" style="font-family: 'Courier New', Courier, monospace; font-size: 12px;">
             <div id="ticket-visual-body"></div>
             <button type="button" class="btn-secondary" onclick="cerrarModalTicket()" style="margin-top: 15px;">Volver</button>
+        </div>
+    </div>
+
+    <!-- MODAL CAMBIO DE PRECIO ESPECIAL -->
+    <div id="modal-precio-especial">
+        <div class="precio-modal-content">
+            <h3 style="margin-top:0; font-size: 1rem; color: #1e293b;">Cambiar Precio del Producto</h3>
+            <p id="lbl-modal-prod-nombre" style="font-size: 0.85rem; color: #555; margin-bottom: 8px;"></p>
+            <p style="font-size: 0.85rem; margin: 4px 0;">Precio Catálogo: <strong>$<span id="lbl-modal-precio-cat">0.00</span></strong></p>
+            
+            <label style="font-size: 0.85rem; margin-top: 8px; display:block;">Nuevo Precio a Cobrar:</label>
+            <input type="number" step="0.01" id="input-nuevo-precio-modal" placeholder="Ej. 15.00">
+            
+            <button type="button" class="btn-info" onclick="guardarPrecioEspecialModal()" style="margin-top: 10px;">Aplicar Precio</button>
+            <button type="button" class="btn-secondary" onclick="cerrarModalPrecio()" style="margin-top: 5px;">Cancelar</button>
         </div>
     </div>
 
@@ -683,6 +699,7 @@
         let carrito = [];
         let ultimaVentaRealizada = null;
         let nipSeguridad = "";
+        let indiceItemEditandoPrecio = null;
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -940,7 +957,7 @@
                     codigo: productoEncontrado.codigo,
                     nombre: productoEncontrado.nombre,
                     precioCatalogo: productoEncontrado.precio,
-                    precioVenta: productoEncontrado.precio, // Inicia con el precio original de catálogo
+                    precioVenta: productoEncontrado.precio, // Inicia con el precio de catálogo original
                     costo: productoEncontrado.costo,
                     cantidad: 1,
                     subtotal: productoEncontrado.precio
@@ -964,10 +981,11 @@
                     <td>${item.cantidad}</td>
                     <td>$${item.precioCatalogo.toFixed(2)}</td>
                     <td>
-                        <input type="number" step="0.01" value="${item.precioVenta.toFixed(2)}" style="width: 90px; padding: 4px; margin: 0;" onchange="actualizarPrecioVentaItem(${index}, this.value)">
+                        $${item.precioVenta.toFixed(2)}
+                        <br><button type="button" class="btn-warning" style="padding:2px 6px; font-size:0.7rem; margin-top:3px; width:auto;" onclick="abrirModalPrecioEspecial(${index})">Cambiar Precio</button>
                     </td>
                     <td>$${item.subtotal.toFixed(2)}</td>
-                    <td><button class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="quitarItemCarrito(${index})">X</button></td>
+                    <td><button class="btn-danger" style="padding:4px 6px; font-size:0.75rem;" onclick="quitarItemCarrito(${index})">X</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -976,32 +994,48 @@
             calcularCambio();
         }
 
-        function actualizarPrecioVentaItem(index, nuevoValorStr) {
-            const nuevoPrecio = parseFloat(nuevoValorStr);
-            if (isNaN(nuevoPrecio) || nuevoPrecio < 0) {
-                alert('Precio inválido.');
-                renderizarCarrito();
+        function abrirModalPrecioEspecial(index) {
+            indiceItemEditandoPrecio = index;
+            const item = carrito[index];
+            document.getElementById('lbl-modal-prod-nombre').innerText = item.nombre;
+            document.getElementById('lbl-modal-precio-cat').innerText = item.precioCatalogo.toFixed(2);
+            document.getElementById('input-nuevo-precio-modal').value = item.precioVenta.toFixed(2);
+            document.getElementById('modal-precio-especial').style.display = 'flex';
+        }
+
+        function cerrarModalPrecio() {
+            document.getElementById('modal-precio-especial').style.display = 'none';
+            indiceItemEditandoPrecio = null;
+        }
+
+        function guardarPrecioEspecialModal() {
+            if (indiceItemEditandoPrecio === null) return;
+            const inputVal = parseFloat(document.getElementById('input-nuevo-precio-modal').value);
+            
+            if (isNaN(inputVal) || inputVal < 0) {
+                alert('Ingresa un precio válido.');
                 return;
             }
 
-            // Si el precio es menor al original de catálogo, requerimos NIP de seguridad
-            if (nuevoPrecio < carrito[index].precioCatalogo) {
+            const item = carrito[indiceItemEditandoPrecio];
+
+            // Si es menor al de catálogo, requerimos el NIP de seguridad
+            if (inputVal < item.precioCatalogo) {
                 if (!nipSeguridad) {
                     alert('No hay un NIP configurado. Para vender a menor precio, configura primero un NIP en la sección "Seguridad".');
-                    renderizarCarrito();
                     return;
                 }
 
                 const nipIngresado = prompt('El precio ingresado es menor al de catálogo. Introduce el NIP de seguridad para autorizarlo:');
                 if (nipIngresado === null || nipIngresado !== nipSeguridad) {
-                    alert('NIP incorrecto o cancelado. Se restaurará el precio anterior.');
-                    renderizarCarrito();
+                    alert('NIP incorrecto o cancelado.');
                     return;
                 }
             }
 
-            carrito[index].precioVenta = nuevoPrecio;
-            carrito[index].subtotal = carrito[index].cantidad * nuevoPrecio;
+            item.precioVenta = inputVal;
+            item.subtotal = item.cantidad * inputVal;
+            cerrarModalPrecio();
             renderizarCarrito();
         }
 
@@ -1042,11 +1076,10 @@
                 }
             });
 
-            // Mapeamos los elementos para guardar el precio final cobrado de forma correcta
             const itemsVenta = carrito.map(item => ({
                 codigo: item.codigo,
                 nombre: item.nombre,
-                precio: item.precioVenta, // Guarda el precio de venta real aplicado
+                precio: item.precioVenta, // Guarda el precio cobrado real aplicado
                 costo: item.costo,
                 cantidad: item.cantidad,
                 subtotal: item.subtotal

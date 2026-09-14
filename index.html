@@ -133,7 +133,7 @@
         .img-preview-form { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; display: block; margin-top: 4px; }
         .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
         .input-stock-table { width: 70px; padding: 4px; text-align: center; margin: 0; }
-        .input-carrito-cant { width: 50px; padding: 4px; text-align: center; margin: 0; }
+        .input-carrito-cant { width: 55px; padding: 4px; text-align: center; margin: 0; }
         .input-carrito-desc { width: 65px; padding: 4px; text-align: center; margin: 0; }
 
         /* Estilos del indicador flotante de sincronización */
@@ -861,9 +861,9 @@
                     nombre: p.nombre,
                     precio: p.precio,
                     costo: p.costo,
-                    cantidad: 1,
+                    cantidad: 0, // Inicia en 0 para que el usuario escriba directamente
                     descuentoUnitario: 0,
-                    tipoDescuentoUnitario: 'monto' // 'monto' ($) o 'porcentaje' (%)
+                    tipoDescuentoUnitario: 'monto'
                 });
             }
 
@@ -877,7 +877,6 @@
             let totalGlobal = 0;
 
             carrito.forEach((item, index) => {
-                // Cálculo de descuento unitario aplicado
                 let descUnit = item.descuentoUnitario || 0;
                 let descuentoCalculadoPorUnidad = 0;
 
@@ -887,19 +886,19 @@
                     descuentoCalculadoPorUnidad = descUnit;
                 }
 
-                // Asegurar que el descuento unitario no supere el precio del producto
                 if (descuentoCalculadoPorUnidad > item.precio) {
                     descuentoCalculadoPorUnidad = item.precio;
                 }
 
                 const precioFinalUnitario = item.precio - descuentoCalculadoPorUnidad;
-                const subtotalItem = precioFinalUnitario * item.cantidad;
+                const cantidadValida = item.cantidad || 0;
+                const subtotalItem = precioFinalUnitario * cantidadValida;
                 totalGlobal += subtotalItem;
 
                 tbody.innerHTML += `
                     <tr>
                         <td>${item.nombre}</td>
-                        <td><input type="number" class="input-carrito-cant" value="${item.cantidad}" min="1" onchange="cambiarCantidadCarrito(${index}, this.value)"></td>
+                        <td><input type="number" class="input-carrito-cant" value="${item.cantidad === 0 ? '' : item.cantidad}" placeholder="0" min="0" oninput="cambiarCantidadCarrito(${index}, this.value)"></td>
                         <td>$${item.precio.toFixed(2)}</td>
                         <td><input type="number" step="0.01" class="input-carrito-desc" value="${item.descuentoUnitario || ''}" placeholder="0" oninput="cambiarDescuentoUnitario(${index}, this.value)"></td>
                         <td>
@@ -919,12 +918,19 @@
         }
 
         function cambiarCantidadCarrito(index, nuevaCant) {
-            const cantidad = parseInt(nuevaCant) || 1;
+            const cantidad = parseInt(nuevaCant);
             const item = carrito[index];
             const p = productos[item.codigo];
 
+            if (isNaN(cantidad)) {
+                item.cantidad = 0;
+                actualizarTablaCarrito();
+                return;
+            }
+
             if (p && cantidad > p.stock) {
                 alert('Stock insuficiente.');
+                item.cantidad = p.stock;
                 actualizarTablaCarrito();
                 return;
             }
@@ -972,6 +978,14 @@
             if (carrito.length === 0) {
                 alert('El carrito está vacío.');
                 return;
+            }
+
+            // Validar que no haya cantidades en 0
+            for (let item of carrito) {
+                if (!item.cantidad || item.cantidad <= 0) {
+                    alert(`El producto "${item.nombre}" tiene una cantidad de 0 o vacía.`);
+                    return;
+                }
             }
 
             const cliente = document.getElementById('venta-cliente').value;

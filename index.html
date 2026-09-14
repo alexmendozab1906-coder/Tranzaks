@@ -8,7 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f1f5f9; color: #333; display: flex; height: 100vh; overflow: hidden; }
-        
+
         .sidebar {
             width: 180px;
             background-color: #1e293b;
@@ -250,7 +250,7 @@
                 <div class="card">
                     <h2>Balance General del Día</h2>
                     <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Descargar Datos Nuevos de la Nube</button>
-                    
+
                     <div class="corte-resumen">
                         <p><strong>Total Ingresos del Día:</strong> $<span id="balance-ingresos">0.00</span></p>
                         <p><strong>Total Costo de Producto:</strong> $<span id="balance-egresos">0.00</span></p>
@@ -297,7 +297,7 @@
                             <input type="number" step="0.01" id="prod-precio" placeholder="Precio ($)" required>
                         </div>
                         <input type="number" id="prod-stock" placeholder="Stock inicial" required>
-                        
+
                         <label style="font-size: 0.9rem; margin-top: 8px; display:block;">Imagen del Producto:</label>
                         <div id="contenedor-preview-imagen" style="margin-bottom: 5px;"></div>
                         <input type="file" id="prod-imagen" accept="image/*">
@@ -326,7 +326,7 @@
                 <div class="card">
                     <h2>Corte de Caja del Día</h2>
                     <button type="button" onclick="descargarDeLaNube()" class="btn-info">🔄 Actualizar con la Nube</button>
-                    
+
                     <div class="corte-resumen">
                         <p><strong>Ventas Realizadas Hoy:</strong> <span id="cant-ventas">0</span></p>
                         <p><strong>Ingresos Brutos:</strong> $<span id="total-ingresos">0.00</span></p>
@@ -385,7 +385,7 @@
 
                     <label>URL de Google Apps Script:</label>
                     <input type="text" id="nube-database-url" placeholder="https://script.google.com/macros/s/.../exec">
-                    
+
                     <label>Clave o Token Secreto:</label>
                     <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123">
 
@@ -506,7 +506,7 @@
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
             if (!url) return !silencioso && alert('Ingresa la URL de tu Google Apps Script.');
-            
+
             guardarEnDB('nubeUrl', url);
             guardarEnDB('nubeToken', token);
 
@@ -533,7 +533,7 @@
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
             if (!url) return;
-            
+
             guardarEnDB('nubeUrl', url);
             guardarEnDB('nubeToken', token);
 
@@ -545,7 +545,7 @@
                     return;
                 }
                 if (!data || Object.keys(data).length === 0) return;
-                
+
                 productos = data.productos || {};
                 clientes = data.clientes || {};
                 ventasDelDia = data.ventasDelDia || [];
@@ -608,7 +608,7 @@
             for (let nombre in clientes) select.innerHTML += `<option value="${nombre}">${nombre}</option>`;
         }
 
-        // PRODUCTOS Y ACTUALIZACIÓN DE IMAGEN / STOCK
+        // PRODUCTOS
         function cargarDatosProductoEnFormulario() {
             const codigo = document.getElementById('prod-codigo').value.trim();
             const contenedorPreview = document.getElementById('contenedor-preview-imagen');
@@ -684,7 +684,7 @@
                 inputEl.value = p.stock;
                 return;
             }
-            
+
             p.stock = nuevoStock;
             guardarEnDB('productos', productos);
             actualizarTablaProductos();
@@ -771,7 +771,7 @@
             const tbody = document.querySelector('#tabla-carrito tbody');
             tbody.innerHTML = '';
             let subtotalGeneral = 0;
-            
+
             carrito.forEach(item => {
                 item.precio = item.precioOriginal;
                 let subtotal = item.precio * item.cantidad;
@@ -794,7 +794,7 @@
             carrito.forEach((item, index) => {
                 let precioConDescuentoUnitario = item.precioOriginal * factorDescuento;
                 let subtotalRealItem = precioConDescuentoUnitario * item.cantidad;
-                
+
                 tbody.innerHTML += `<tr>
                     <td>${item.nombre}</td>
                     <td><input type="number" class="input-carrito-cant" value="${item.cantidad}" min="1" onchange="cambiarCantidadCarrito(${index}, this)"></td>
@@ -887,8 +887,8 @@
             guardarEnDB('ventasDelDia', ventasDelDia);
 
             carrito = [];
-            document.getElementById('valor-descuento').value = ""; // Se queda en blanco
-            document.getElementById('monto-pagado').value = ""; // Se queda en blanco
+            document.getElementById('valor-descuento').value = "";
+            document.getElementById('monto-pagado').value = "";
             actualizarTablaCarrito();
             actualizarTablaProductos();
             actualizarVistaCorte();
@@ -918,7 +918,7 @@
         function eliminarVentaDelCorte(index) {
             if (confirm('¿Estás seguro de eliminar esta venta? Los productos se devolverán al inventario y se recalculará el balance.')) {
                 const ventaEliminada = ventasDelDia[index];
-                
+
                 if (ventaEliminada && ventaEliminada.items) {
                     ventaEliminada.items.forEach(i => {
                         if (productos[i.codigo]) {
@@ -943,7 +943,7 @@
         function actualizarVistaBalance() {
             let totalIngresos = 0;
             let totalCosto = 0;
-            
+
             let ingDesc = 0, cosDesc = 0;
             let ingNormal = 0, cosNormal = 0;
 
@@ -1068,39 +1068,39 @@
         function generarPDFTicket(venta) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ unit: 'mm', format: [80, 150] });
-            
+
             doc.setFont("Helvetica", "bold");
             doc.setFontSize(12);
             doc.text("TRANZAKS", 40, 10, { align: "center" });
-            
+
             doc.setFontSize(8);
             doc.setFont("Helvetica", "normal");
             doc.text("Punto de Venta Multi-dispositivo", 40, 15, { align: "center" });
             doc.text(`Fecha: ${venta.fecha}`, 5, 22);
             doc.text(`Cliente: ${venta.cliente}`, 5, 26);
             doc.text(`Pago: ${venta.metodo}`, 5, 30);
-            
+
             doc.line(5, 33, 75, 33);
-            
+
             let y = 38;
             doc.setFont("Helvetica", "bold");
             doc.text("Cant / Producto", 5, y);
             doc.text("Subtotal", 60, y);
             y += 5;
-            
+
             doc.setFont("Helvetica", "normal");
             venta.items.forEach(i => {
                 doc.text(`${i.cantidad}x ${i.nombre}`, 5, y);
                 doc.text(`$${(i.precio * i.cantidad).toFixed(2)}`, 60, y);
                 y += 5;
             });
-            
+
             doc.line(5, y + 2, 75, y + 2);
             y += 7;
-            
+
             doc.setFont("Helvetica", "bold");
             doc.text(`TOTAL: $${venta.total.toFixed(2)}`, 75, y, { align: "right" });
-            
+
             window.open(doc.output('bloburl'), '_blank');
         }
     </script>

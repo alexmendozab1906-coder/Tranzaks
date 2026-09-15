@@ -129,7 +129,8 @@
         .monto-total { font-size: 1.5rem; color: #2c3e50; font-weight: bold; text-align: right; margin: 10px 0; }
         .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
         .corte-resumen p { margin: 6px 0; font-size: 1rem; }
-        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; }
+        .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; display: block; }
+        .img-preview-table:hover { opacity: 0.8; border-color: #2563eb; }
         .img-preview-form { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; display: block; margin-top: 4px; }
         .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
         .input-stock-table { width: 70px; padding: 4px; text-align: center; margin: 0; }
@@ -192,6 +193,9 @@
     <div id="status-message" class="status-hidden">
         <span class="spinner"></span> Sincronizando datos...
     </div>
+
+    <!-- Input oculto global para cambiar imagen directamente desde la tabla -->
+    <input type="file" id="input-cambiar-imagen-global" accept="image/*" style="display: none;" onchange="procesarCambioImagenTabla(event)">
 
     <div class="sidebar collapsed" id="sidebar">
         <div class="sidebar-header">📦 Tranzaks</div>
@@ -348,10 +352,10 @@
                     </form>
 
                     <div class="inversion-box">
-                        💰 Inversión Total en Inventario: $<span id="inversion-total-inventario">0.00</span>
+                        💰 Inversión Total in Inventario: $<span id="inversion-total-inventario">0.00</span>
                     </div>
 
-                    <h3 style="margin-top:20px; font-size: 1rem;">Inventario Actual</h3>
+                    <h3 style="margin-top:20px; font-size: 1rem;">Inventario Actual (Haz clic en la imagen de un producto para cambiarla)</h3>
                     <div style="max-height: 250px; overflow-y: auto;">
                         <table id="tabla-productos">
                             <thead>
@@ -461,6 +465,7 @@
         let ultimaVentaRealizada = null;
         let carrito = [];
         let nipSeguridad = "";
+        let codigoProductoActualizandoImagen = null;
 
         const statusMessage = document.getElementById('status-message');
 
@@ -566,7 +571,6 @@
             else if (idSeccion === 'sec-mensual') { cargarOpcionesMeses(); actualizarVistaMensual(); }
         }
 
-        // Función única que realiza envío y recepción combinados de forma inteligente
         function sincronizarBidireccional(silencioso = false) {
             const url = document.getElementById('nube-database-url').value.trim();
             const token = document.getElementById('nube-token').value.trim();
@@ -585,7 +589,6 @@
             .then(res => res.json())
             .then(response => {
                 if(response.status === "success") {
-                    // Si el Apps Script también devuelve la data combinada/actualizada de la nube:
                     if (response.data) {
                         productos = response.data.productos || productos;
                         clientes = response.data.clientes || clientes;
@@ -670,7 +673,7 @@
             select.innerHTML = html;
         }
 
-        // PRODUCTOS
+        // PRODUCTOS & IMAGENES
         function cargarDatosProductoEnFormulario() {
             const codigo = document.getElementById('prod-codigo').value.trim();
             const prod = productos[codigo];
@@ -743,7 +746,9 @@
             for (let codigo in productos) {
                 const p = productos[codigo];
                 inversionTotal += (p.costo * p.stock);
-                const imgTag = p.imagen ? `<img src="${p.imagen}" class="img-preview-table">` : 'Sin img';
+                const imgTag = p.imagen 
+                    ? `<img src="${p.imagen}" class="img-preview-table" title="Haz clic para cambiar imagen" onclick="dispararCambioImagen('${codigo}')">` 
+                    : `<button type="button" class="btn-info" style="padding:2px 4px; font-size:0.7rem;" title="Agregar imagen" onclick="dispararCambioImagen('${codigo}')">+Img</button>`;
 
                 tbody.innerHTML += `
                     <tr>
@@ -758,6 +763,32 @@
                 `;
             }
             document.getElementById('inversion-total-inventario').innerText = inversionTotal.toFixed(2);
+        }
+
+        function dispararCambioImagen(codigo) {
+            codigoProductoActualizandoImagen = codigo;
+            document.getElementById('input-cambiar-imagen-global').value = ''; // Limpiar selector
+            document.getElementById('input-cambiar-imagen-global').click();
+        }
+
+        function procesarCambioImagenTabla(event) {
+            const archivo = event.target.files[0];
+            if (!archivo || !codigoProductoActualizandoImagen) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const nuevaImagenBase64 = e.target.result;
+                if (productos[codigoProductoActualizandoImagen]) {
+                    productos[codigoProductoActualizandoImagen].imagen = nuevaImagenBase64;
+                    guardarEnDB('productos', productos, () => {
+                        actualizarTablaProductos();
+                        sincronizarBidireccional(true);
+                        alert('¡Imagen del producto actualizada con éxito!');
+                    });
+                }
+                codigoProductoActualizandoImagen = null;
+            };
+            reader.readAsDataURL(archivo);
         }
 
         function cambiarStockDirecto(codigo, nuevoStock) {

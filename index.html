@@ -466,6 +466,11 @@
         let carrito = [];
         let nipSeguridad = "";
         let codigoProductoActualizandoImagen = null;
+        
+        // Variables globales para asegurar conexión inmediata al arrancar
+        let nubeUrlGlobal = "";
+        let nubeTokenGlobal = "";
+        let intentoSyncIniciado = false;
 
         const statusMessage = document.getElementById('status-message');
 
@@ -518,21 +523,32 @@
             store.get('clientes').onsuccess = (e) => { clientes = e.target.result || {}; actualizarTablaClientes(); actualizarSelectClientes(); };
             store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); };
             store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; };
+            
             store.get('nubeUrl').onsuccess = (e) => { 
-                if(e.target.result) {
-                    document.getElementById('nube-database-url').value = e.target.result;
-                    setTimeout(() => sincronizarBidireccional(true), 300);
-                }
+                nubeUrlGlobal = e.target.result || "";
+                document.getElementById('nube-database-url').value = nubeUrlGlobal;
+                intentarSincronizacionInicial();
             };
-            store.get('nubeToken').onsuccess = (e) => { if(e.target.result) document.getElementById('nube-token').value = e.target.result; };
+            store.get('nubeToken').onsuccess = (e) => { 
+                nubeTokenGlobal = e.target.result || "";
+                document.getElementById('nube-token').value = nubeTokenGlobal;
+                intentarSincronizacionInicial();
+            };
             store.get('nipSeguridad').onsuccess = (e) => { nipSeguridad = e.target.result || ""; actualizarInterfazNIP(); };
         }
 
+        function intentarSincronizacionInicial() {
+            if (nubeUrlGlobal && !intentoSyncIniciado) {
+                intentoSyncIniciado = true;
+                setTimeout(() => sincronizarBidireccional(true), 400);
+            }
+        }
+
         function guardarCredencialesNube() {
-            const url = document.getElementById('nube-database-url').value.trim();
-            const token = document.getElementById('nube-token').value.trim();
-            guardarEnDB('nubeUrl', url);
-            guardarEnDB('nubeToken', token);
+            nubeUrlGlobal = document.getElementById('nube-database-url').value.trim();
+            nubeTokenGlobal = document.getElementById('nube-token').value.trim();
+            guardarEnDB('nubeUrl', nubeUrlGlobal);
+            guardarEnDB('nubeToken', nubeTokenGlobal);
         }
 
         function actualizarInterfazNIP() {
@@ -572,12 +588,13 @@
         }
 
         function sincronizarBidireccional(silencioso = false) {
-            const url = document.getElementById('nube-database-url').value.trim();
-            const token = document.getElementById('nube-token').value.trim();
+            guardarCredencialesNube();
+            const url = nubeUrlGlobal;
+            const token = nubeTokenGlobal;
+            
             if (!url) return Promise.resolve();
             
-            guardarCredencialesNube();
-            mostrarEstado("Sincronizando con la nube (Subiendo y descargando)...");
+            mostrarEstado("Sincronizando con la nube...");
 
             const datosAEnviar = { token, productos, clientes, ventasDelDia, historialMensual };
 
@@ -608,9 +625,9 @@
                         actualizarVistaBalance();
                     }
 
-                    mostrarEstado("¡Sincronización completa! ✓", false);
+                    mostrarEstado("¡Sincronizado! ✓", false);
                     ocultarEstado(2000);
-                    if (!silencioso) alert('🔄 ¡Datos subidos y descargados correctamente con la nube!');
+                    if (!silencioso) alert('🔄 ¡Datos sincronizados correctamente con la nube!');
                 } else {
                     mostrarEstado("Error: " + (response.message || 'Token incorrecto'), false);
                     ocultarEstado(3000);
@@ -618,7 +635,7 @@
                 }
             })
             .catch(err => {
-                mostrarEstado("Sin conexión / Modo Offline", false);
+                mostrarEstado("Modo Offline", false);
                 ocultarEstado(3000);
                 if (!silencioso) alert('Aviso: Estás offline o hubo un error de red. Los cambios se guardaron localmente.');
             });
@@ -767,7 +784,7 @@
 
         function dispararCambioImagen(codigo) {
             codigoProductoActualizandoImagen = codigo;
-            document.getElementById('input-cambiar-imagen-global').value = ''; // Limpiar selector
+            document.getElementById('input-cambiar-imagen-global').value = '';
             document.getElementById('input-cambiar-imagen-global').click();
         }
 

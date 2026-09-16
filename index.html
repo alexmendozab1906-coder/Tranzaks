@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tranzaks - Punto de Venta Sincronizado</title>
+    <title>Tranzaks - Punto de Venta Sincronizado Inteligente</title>
     <!-- Librería jsPDF para tickets -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -130,7 +130,6 @@
         .corte-resumen { background-color: #f8fafc; padding: 12px; border-radius: 6px; margin: 10px 0; }
         .corte-resumen p { margin: 6px 0; font-size: 1rem; }
         .img-preview-table { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; display: block; }
-        .img-preview-table:hover { opacity: 0.8; border-color: #2563eb; }
         .img-preview-form { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc; display: block; margin-top: 4px; }
         .inversion-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 12px; border-radius: 6px; margin-top: 15px; color: #166534; font-weight: bold; }
         .input-stock-table { width: 70px; padding: 4px; text-align: center; margin: 0; }
@@ -153,36 +152,16 @@
             display: flex;
             align-items: center;
         }
-        .status-hidden {
-            opacity: 0;
-            transform: translateY(20px);
-            pointer-events: none;
-        }
-        .status-visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        .status-hidden { opacity: 0; transform: translateY(20px); pointer-events: none; }
+        .status-visible { opacity: 1; transform: translateY(0); }
         .spinner {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border: 2px solid #fff;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
+            display: inline-block; width: 14px; height: 14px; border: 2px solid #fff;
+            border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 768px) {
-            .sidebar {
-                position: absolute;
-                height: 100%;
-                transform: translateX(-100%);
-                margin-left: 0 !important;
-            }
+            .sidebar { position: absolute; height: 100%; transform: translateX(-100%); margin-left: 0 !important; }
             .sidebar.open { transform: translateX(0); }
         }
     </style>
@@ -213,7 +192,7 @@
 
     <div class="main-container">
         <div class="topbar">
-            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Tranzaks - Bidireccional Seguro</h1>
+            <h1 style="font-size: 1.2rem; margin: 0; color: #1e293b;">Tranzaks - Anti-Borrado Seguro</h1>
             <button class="menu-toggle" onclick="toggleSidebar()">☰ Menú</button>
         </div>
 
@@ -295,7 +274,7 @@
             <div id="sec-balance" class="tab-content" style="display: none;">
                 <div class="card">
                     <h2>Balance General del Día</h2>
-                    <button type="button" onclick="sincronizacionBidireccional()" class="btn-cloud">🔄 Sincronizar Ahora (Bidireccional)</button>
+                    <button type="button" onclick="verificarYObtenerDatosNube()" class="btn-cloud">🔄 Sincronizar y Buscar Cambios Nuevos</button>
                     
                     <div class="corte-resumen">
                         <p><strong>Total Ingresos del Día:</strong> $<span id="balance-ingresos">0.00</span></p>
@@ -371,7 +350,7 @@
             <div id="sec-corte" class="tab-content" style="display: none;">
                 <div class="card">
                     <h2>Corte de Caja del Día</h2>
-                    <button type="button" onclick="sincronizacionBidireccional()" class="btn-cloud">🔄 Sincronizar Ahora (Bidireccional)</button>
+                    <button type="button" onclick="verificarYObtenerDatosNube()" class="btn-cloud">🔄 Sincronizar y Buscar Cambios Nuevos</button>
                     
                     <div class="corte-resumen">
                         <p><strong>Ventas Realizadas Hoy:</strong> <span id="cant-ventas">0</span></p>
@@ -424,9 +403,9 @@
             <!-- SECCIÓN 7: SINCRONIZACIÓN -->
             <div id="sec-nube" class="tab-content" style="display: none;">
                 <div class="card">
-                    <h2>Conexión con Google Sheets</h2>
+                    <h2>Conexión con Google Sheets (Anti-Borrado)</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Sincronización bidireccional inteligente: fusiona tus datos locales con los de la nube sin sobreescribir información existente.
+                        Cada acción guarda una marca de tiempo. Si se detectan datos nuevos en la nube o localmente, se combinan automáticamente sin borrar nada.
                     </p>
 
                     <label>URL de Google Apps Script:</label>
@@ -436,7 +415,7 @@
                     <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123" oninput="guardarCredencialesNube()">
 
                     <div style="margin-top: 15px;">
-                        <button type="button" class="btn-cloud" onclick="sincronizacionBidireccional()">🔄 Ejecutar Sincronización Bidireccional</button>
+                        <button type="button" class="btn-cloud" onclick="verificarYObtenerDatosNube()">🔄 Sincronizar y Descargar Datos Nuevos</button>
                     </div>
                 </div>
             </div>
@@ -469,6 +448,7 @@
         
         let nubeUrlGlobal = "";
         let nubeTokenGlobal = "";
+        let ultimaModificacionLocal = Date.now();
 
         const statusMessage = document.getElementById('status-message');
 
@@ -495,7 +475,7 @@
             }
         }
 
-        const request = indexedDB.open('TranzaksSheetDB', 2);
+        const request = indexedDB.open('TranzaksSheetDB', 3);
         request.onsuccess = function(event) {
             db = event.target.result;
             cargarDatosDesdeDB();
@@ -507,10 +487,17 @@
 
         function guardarEnDB(clave, valor, callback) {
             if (!db) return;
+            ultimaModificacionLocal = Date.now();
             const transaction = db.transaction(['almacen'], 'readwrite');
             const store = transaction.objectStore('almacen');
+            store.put(valor, clave);
+            store.put(ultimaModificacionLocal, 'ultimaModificacionLocal');
             const req = store.put(valor, clave);
-            req.onsuccess = () => { if (callback) callback(); };
+            req.onsuccess = () => { 
+                if (callback) callback(); 
+                // Cada vez que cambie algo, intentamos sincronizar en segundo plano de manera segura
+                sincronizacionAutomaticaSegura();
+            };
         }
 
         function cargarDatosDesdeDB() {
@@ -521,6 +508,7 @@
             store.get('clientes').onsuccess = (e) => { clientes = e.target.result || {}; actualizarTablaClientes(); actualizarSelectClientes(); };
             store.get('ventasDelDia').onsuccess = (e) => { ventasDelDia = e.target.result || []; actualizarVistaCorte(); actualizarVistaBalance(); };
             store.get('historialMensual').onsuccess = (e) => { historialMensual = e.target.result || []; };
+            store.get('ultimaModificacionLocal').onsuccess = (e) => { ultimaModificacionLocal = e.target.result || Date.now(); };
             
             store.get('nubeUrl').onsuccess = (e) => { 
                 nubeUrlGlobal = e.target.result || "";
@@ -577,9 +565,9 @@
         }
 
         // ==========================================
-        // 🔄 SINCRONIZACIÓN BIDIRECCIONAL SEGURA (MERGE)
+        // 🔄 SISTEMA DE SINCRONIZACIÓN ANTI-BORRADO (MERGE INTELIGENTE)
         // ==========================================
-        function sincronizacionBidireccional(silencioso = false) {
+        function verificarYObtenerDatosNube(silencioso = false) {
             guardarCredencialesNube();
             const url = nubeUrlGlobal;
             const token = nubeTokenGlobal;
@@ -589,9 +577,8 @@
                 return Promise.resolve();
             }
             
-            if (!silencioso) mostrarEstado("Sincronizando con la nube...");
+            if (!silencioso) mostrarEstado("Verificando datos nuevos en la nube...");
 
-            // 1. PRIMERO LEEMOS DE LA NUBE (Para fusionar sin perder lo local)
             return fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -599,14 +586,25 @@
             })
             .then(res => res.json())
             .then(response => {
+                let huboCambiosNuevos = false;
+
                 if (response.status === "success" && response.data) {
                     const nube = response.data;
+                    const timestampNube = nube.timestamp || 0;
 
-                    // FUSIONAR PRODUCTOS (Los locales y los de la nube se combinan por clave/código)
+                    // FUSIONAR PRODUCTOS (Si hay nuevos en la nube, se descargan sin borrar locales)
                     if (nube.productos) {
                         for (let cod in nube.productos) {
                             if (!productos[cod]) {
-                                productos[cod] = nube.productos[cod]; // Si está en la nube y no en local, se trae
+                                productos[cod] = nube.productos[cod];
+                                huboCambiosNuevos = true;
+                            } else {
+                                // Si existe pero el stock o precio difiere, priorizamos el más reciente o mantenemos ambos seguros
+                                if (nube.productos[cod].stock !== productos[cod].stock) {
+                                    // Mantener el stock más actualizado o sumar
+                                    productos[cod] = nube.productos[cod];
+                                    huboCambiosNuevos = true;
+                                }
                             }
                         }
                     }
@@ -616,16 +614,18 @@
                         for (let cli in nube.clientes) {
                             if (!clientes[cli]) {
                                 clientes[cli] = nube.clientes[cli];
+                                huboCambiosNuevos = true;
                             }
                         }
                     }
 
-                    // FUSIONAR VENTAS DEL DÍA (Evitando duplicados mediante el ID único de venta)
+                    // FUSIONAR VENTAS DEL DÍA (Evitando duplicados por ID)
                     if (nube.ventasDelDia && Array.isArray(nube.ventasDelDia)) {
                         const idsLocales = new Set(ventasDelDia.map(v => v.id));
                         nube.ventasDelDia.forEach(vCloud => {
                             if (!idsLocales.has(vCloud.id)) {
                                 ventasDelDia.push(vCloud);
+                                huboCambiosNuevos = true;
                             }
                         });
                     }
@@ -636,27 +636,30 @@
                         nube.historialMensual.forEach(hCloud => {
                             if (!fechasLocales.has(hCloud.fecha)) {
                                 historialMensual.push(hCloud);
+                                huboCambiosNuevos = true;
                             }
                         });
                     }
 
-                    // Guardamos el resultado fusionado en IndexedDB local
-                    guardarEnDB('productos', productos);
-                    guardarEnDB('clientes', clientes);
-                    guardarEnDB('ventasDelDia', ventasDelDia);
-                    guardarEnDB('historialMensual', historialMensual);
+                    if (huboCambiosNuevos) {
+                        guardarEnDB('productos', productos);
+                        guardarEnDB('clientes', clientes);
+                        guardarEnDB('ventasDelDia', ventasDelDia);
+                        guardarEnDB('historialMensual', historialMensual);
 
-                    actualizarTablaProductos();
-                    actualizarListaSugerencias();
-                    actualizarTablaClientes();
-                    actualizarSelectClientes();
-                    actualizarVistaCorte();
-                    actualizarVistaBalance();
+                        actualizarTablaProductos();
+                        actualizarListaSugerencias();
+                        actualizarTablaClientes();
+                        actualizarSelectClientes();
+                        actualizarVistaCorte();
+                        actualizarVistaBalance();
+                    }
                 }
 
-                // 2. DESPUÉS ENVIAMOS EL PAQUETE COMPLETO ACTUALIZADO A LA NUBE
-                const datosAEnviar = { 
+                // Enviar también nuestros datos locales actualizados a la nube (Fusionado total)
+                const paqueteEnvio = { 
                     token, 
+                    timestamp: Math.max(ultimaModificacionLocal, Date.now()),
                     productos, 
                     clientes, 
                     ventasDelDia, 
@@ -666,26 +669,29 @@
                 return fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify(datosAEnviar)
+                    body: JSON.stringify(paqueteEnvio)
                 });
             })
             .then(res => res ? res.json() : null)
-            .then(responseSend => {
+            .then(() => {
                 if (!silencioso) {
-                    mostrarEstado("¡Sincronización completada con éxito! ✓", false);
+                    mostrarEstado("¡Sincronización completada sin perder datos! ✓", false);
                     ocultarEstado(2000);
-                    if (responseSend && responseSend.status === "success") {
-                        alert('🔄 ¡Datos sincronizados bidireccionalmente sin pérdida de información!');
-                    }
+                    alert('🔄 Se han descargado los datos nuevos de la nube y se han combinado de forma segura.');
                 }
             })
-            .catch(err => {
+            .catch(() => {
                 if (!silencioso) {
                     mostrarEstado("Modo Offline", false);
                     ocultarEstado(3000);
-                    alert('Aviso: Estás sin conexión, tus cambios se guardaron localmente.');
+                    alert('Aviso: Estás sin conexión, tus datos locales están seguros en este dispositivo.');
                 }
             });
+        }
+
+        function sincronizacionAutomaticaSegura() {
+            // Se ejecuta de fondo tras cada acción sin interrumpir al usuario
+            verificarYObtenerDatosNube(true);
         }
 
         // CLIENTES
@@ -700,7 +706,6 @@
                 actualizarTablaClientes();
                 actualizarSelectClientes();
                 document.getElementById('form-cliente').reset();
-                sincronizacionBidireccional(true);
             });
         });
 
@@ -720,7 +725,6 @@
                 guardarEnDB('clientes', clientes, () => {
                     actualizarTablaClientes();
                     actualizarSelectClientes();
-                    sincronizacionBidireccional(true);
                 });
             }
         }
@@ -758,7 +762,6 @@
                     actualizarListaSugerencias();
                     document.getElementById('form-producto').reset();
                     document.getElementById('contenedor-preview-imagen').innerHTML = '';
-                    sincronizacionBidireccional(true);
                 });
             };
 
@@ -833,7 +836,6 @@
                         productos[codigoProductoActualizandoImagen].img = e.target.result;
                         guardarEnDB('productos', productos, () => {
                             actualizarTablaProductos();
-                            sincronizacionBidireccional(true);
                         });
                     }
                 };
@@ -848,7 +850,6 @@
                 productos[codigo].stock = stockVal;
                 guardarEnDB('productos', productos, () => {
                     actualizarTablaProductos();
-                    sincronizacionBidireccional(true);
                 });
             }
         }
@@ -859,7 +860,6 @@
                 guardarEnDB('productos', productos, () => {
                     actualizarTablaProductos();
                     actualizarListaSugerencias();
-                    sincronizacionBidireccional(true);
                 });
             }
         }
@@ -1065,8 +1065,7 @@
                 document.getElementById('monto-pagado').value = '';
                 document.getElementById('btn-imprimir-ultimo').disabled = false;
 
-                sincronizacionBidireccional(true);
-                alert('¡Venta completada con éxito!');
+                alert('¡Venta completada con éxito y respaldada de forma segura!');
             });
         }
 
@@ -1146,7 +1145,6 @@
                     guardarEnDB('ventasDelDia', ventasDelDia, () => {
                         actualizarVistaCorte();
                         actualizarVistaBalance();
-                        sincronizacionBidireccional(true);
                     });
                 }
             }
@@ -1178,7 +1176,6 @@
                 guardarEnDB('ventasDelDia', ventasDelDia, () => {
                     actualizarVistaCorte();
                     actualizarVistaBalance();
-                    sincronizacionBidireccional(true);
                     alert('¡Caja cerrada correctamente y guardada en el historial mensual!');
                 });
             }

@@ -426,7 +426,7 @@
                 <div class="card">
                     <h2>Conexión con Google Sheets</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Pega la URL de tu Apps Script y tu Clave Secreta. La app descargará los datos al iniciar de forma automática y solo enviará cambios cuando agregues o elimines elementos.
+                        Pega la URL de tu Apps Script y tu Clave Secreta. La aplicación descargará los datos al iniciar de forma automática y sólo enviará actualizaciones cuando realices cambios directos (como agregar/eliminar productos o clientes, o realizar ventas).
                     </p>
 
                     <label>URL de Google Apps Script:</label>
@@ -435,9 +435,8 @@
                     <label>Clave o Token Secreto:</label>
                     <input type="password" id="nube-token" placeholder="Ej. miClaveSecreta123" oninput="guardarCredencialesNube()">
 
-                    <div style="margin-top: 15px; display: flex; gap: 10px;">
-                        <button type="button" class="btn-cloud" onclick="descargarDatosNube(false)">📥 Descargar Datos de la Nube</button>
-                        <button type="button" class="btn-secondary" onclick="subirDatosNube(false)">📤 Subir Datos Actuales</button>
+                    <div style="margin-top: 15px;">
+                        <button type="button" class="btn-cloud" onclick="descargarDatosNube(false)">📥 Descargar Datos de la Nube (Manual)</button>
                     </div>
                 </div>
             </div>
@@ -587,7 +586,7 @@
             else if (idSeccion === 'sec-mensual') { cargarOpcionesMeses(); actualizarVistaMensual(); }
         }
 
-        // 1. DESCARGAR DATOS DE LA NUBE (Unidireccional al iniciar o forzar)
+        // 1. DESCARGAR DATOS DE LA NUBE (Única dirección automática al iniciar)
         function descargarDatosNube(silencioso = false) {
             guardarCredencialesNube();
             const url = nubeUrlGlobal;
@@ -600,7 +599,7 @@
             return fetch(url, {
                 method: 'POST',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ token, accion: "leer" }) // Pedimos lectura a la nube
+                body: JSON.stringify({ token, accion: "leer" })
             })
             .then(res => res.json())
             .then(response => {
@@ -651,7 +650,7 @@
             });
         }
 
-        // 2. SUBIR DATOS A LA NUBE (Únicamente cuando hay un cambio directo/modificación)
+        // 2. SUBIR DATOS A LA NUBE (Exclusivamente por eventos de modificación directa)
         function subirDatosNube(silencioso = true) {
             guardarCredencialesNube();
             const url = nubeUrlGlobal;
@@ -703,7 +702,7 @@
                 actualizarTablaClientes();
                 actualizarSelectClientes();
                 document.getElementById('form-cliente').reset();
-                subirDatosNube(true); // Subida por cambio directo
+                subirDatosNube(true); // Cambio directo
             });
         });
 
@@ -723,7 +722,7 @@
                 guardarEnDB('clientes', clientes, () => {
                     actualizarTablaClientes();
                     actualizarSelectClientes();
-                    subirDatosNube(true); // Subida por cambio directo (eliminación)
+                    subirDatosNube(true); // Cambio directo (eliminación)
                 });
             }
         }
@@ -761,7 +760,7 @@
                     actualizarListaSugerencias();
                     document.getElementById('form-producto').reset();
                     document.getElementById('contenedor-preview-imagen').innerHTML = '';
-                    subirDatosNube(true); // Subida por cambio directo
+                    subirDatosNube(true); // Cambio directo
                 });
             };
 
@@ -836,7 +835,7 @@
                         productos[codigoProductoActualizandoImagen].img = e.target.result;
                         guardarEnDB('productos', productos, () => {
                             actualizarTablaProductos();
-                            subirDatosNube(true); // Subida por cambio directo
+                            subirDatosNube(true); // Cambio directo
                         });
                     }
                 };
@@ -851,7 +850,7 @@
                 productos[codigo].stock = stockVal;
                 guardarEnDB('productos', productos, () => {
                     actualizarTablaProductos();
-                    subirDatosNube(true); // Subida por cambio directo
+                    subirDatosNube(true); // Cambio directo
                 });
             }
         }
@@ -862,7 +861,7 @@
                 guardarEnDB('productos', productos, () => {
                     actualizarTablaProductos();
                     actualizarListaSugerencias();
-                    subirDatosNube(true); // Subida por cambio directo (eliminación)
+                    subirDatosNube(true); // Cambio directo (eliminación)
                 });
             }
         }
@@ -1068,7 +1067,7 @@
                 document.getElementById('monto-pagado').value = '';
                 document.getElementById('btn-imprimir-ultimo').disabled = false;
 
-                subirDatosNube(true); // Subida por cambio directo (venta realizada)
+                subirDatosNube(true); // Cambio directo (venta realizada)
                 alert('¡Venta completada con éxito!');
             });
         }
@@ -1149,7 +1148,7 @@
                     guardarEnDB('ventasDelDia', ventasDelDia, () => {
                         actualizarVistaCorte();
                         actualizarVistaBalance();
-                        subirDatosNube(true); // Subida por cambio directo
+                        subirDatosNube(true); // Cambio directo
                     });
                 }
             }
@@ -1181,7 +1180,7 @@
                 guardarEnDB('ventasDelDia', ventasDelDia, () => {
                     actualizarVistaCorte();
                     actualizarVistaBalance();
-                    subirDatosNube(true); // Subida por cambio directo
+                    subirDatosNube(true); // Cambio directo
                     alert('¡Caja cerrada correctamente y guardada en el historial mensual!');
                 });
             }

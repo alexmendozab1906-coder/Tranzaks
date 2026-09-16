@@ -426,7 +426,7 @@
                 <div class="card">
                     <h2>Conexión con Google Sheets</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Pega la URL de tu Apps Script y tu Clave Secreta. Los datos se guardan de forma segura en tu dispositivo y se envían automáticamente a la nube cuando realizas cambios (como agregar/eliminar productos o clientes, o realizar ventas).
+                        Pega la URL de tu Apps Script y tu Clave Secreta. Los datos locales mandan y se respaldan automáticamente en tu nube.
                     </p>
 
                     <label>URL de Google Apps Script:</label>
@@ -525,7 +525,6 @@
             store.get('nubeUrl').onsuccess = (e) => { 
                 nubeUrlGlobal = e.target.result || "";
                 document.getElementById('nube-database-url').value = nubeUrlGlobal;
-                // NOTA: Se eliminó cualquier intento de descarga automática al iniciar para proteger los datos locales.
             };
             store.get('nubeToken').onsuccess = (e) => { 
                 nubeTokenGlobal = e.target.result || "";
@@ -577,7 +576,7 @@
             else if (idSeccion === 'sec-mensual') { cargarOpcionesMeses(); actualizarVistaMensual(); }
         }
 
-        // 1. DESCARGAR DATOS DE LA NUBE (Exclusivamente Manual)
+        // 1. DESCARGAR DATOS DE LA NUBE (Con validación de seguridad anti-vacío)
         function descargarDatosNube(silencioso = false) {
             guardarCredencialesNube();
             const url = nubeUrlGlobal;
@@ -598,20 +597,34 @@
             .then(res => res.json())
             .then(response => {
                 if(response.status === "success" && response.data) {
-                    if (response.data.productos && Object.keys(response.data.productos).length > 0) {
-                        productos = response.data.productos;
+                    const datosNube = response.data;
+                    
+                    // 🔒 VALIDACIÓN: No sobreescribir con datos vacíos si la nube está en blanco
+                    const tieneProductosCloud = datosNube.productos && Object.keys(datosNube.productos).length > 0;
+                    
+                    if (!tieneProductosCloud) {
+                        if (!silencioso) {
+                            mostrarEstado("La nube está vacía", false);
+                            ocultarEstado(3000);
+                            alert('⚠️ Aviso: La nube no contiene datos guardados para descargar.');
+                        }
+                        return;
+                    }
+
+                    if (tieneProductosCloud) {
+                        productos = datosNube.productos;
                         guardarEnDB('productos', productos);
                     }
-                    if (response.data.clientes && Object.keys(response.data.clientes).length > 0) {
-                        clientes = response.data.clientes;
+                    if (datosNube.clientes && Object.keys(datosNube.clientes).length > 0) {
+                        clientes = datosNube.clientes;
                         guardarEnDB('clientes', clientes);
                     }
-                    if (response.data.ventasDelDia && response.data.ventasDelDia.length > 0) {
-                        ventasDelDia = response.data.ventasDelDia;
+                    if (datosNube.ventasDelDia && datosNube.ventasDelDia.length > 0) {
+                        ventasDelDia = datosNube.ventasDelDia;
                         guardarEnDB('ventasDelDia', ventasDelDia);
                     }
-                    if (response.data.historialMensual && response.data.historialMensual.length > 0) {
-                        historialMensual = response.data.historialMensual;
+                    if (datosNube.historialMensual && datosNube.historialMensual.length > 0) {
+                        historialMensual = datosNube.historialMensual;
                         guardarEnDB('historialMensual', historialMensual);
                     }
 
@@ -644,13 +657,19 @@
             });
         }
 
-        // 2. SUBIR DATOS A LA NUBE (Unidireccional por cambios directos)
+        // 2. SUBIR DATOS A LA NUBE (Con protección estricta anti-borrado)
         function subirDatosNube(silencioso = true) {
             guardarCredencialesNube();
             const url = nubeUrlGlobal;
             const token = nubeTokenGlobal;
             
             if (!url) return Promise.resolve();
+            
+            // 🔒 PROTECCIÓN LOCAL: Evitar mandar paquetes vacíos si el navegador perdió memoria temporalmente
+            if (!productos || Object.keys(productos).length === 0) {
+                console.warn("Intento de subida cancelado: No hay productos locales para enviar.");
+                return Promise.resolve();
+            }
             
             mostrarEstado("Guardando cambios en la nube...");
 

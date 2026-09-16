@@ -227,7 +227,7 @@
                         <option value="Público General">Público General</option>
                     </select>
 
-                    <form id="form-venta" style="margin-top: 10px;">
+                    <form id="form-venta" style="margin-top: 10px;" onsubmit="agregarProductoAlCarritoDesdeForm(event)">
                         <input type="text" id="venta-busqueda" list="lista-sugerencias-productos" placeholder="Nombre o código del producto" required autocomplete="off">
                         <datalist id="lista-sugerencias-productos"></datalist>
                         <button type="submit" class="btn-info">Agregar Producto</button>
@@ -595,7 +595,17 @@
             
             mostrarEstado("Sincronizando con la nube...");
 
-            const datosAEnviar = { token, productos, clientes, ventasDelDia, historialMensual };
+            // Candado de seguridad anti-borrado: si este dispositivo está totalmente vacío,
+            // evitamos enviar datos vacíos para no sobrescribir la nube por accidente.
+            const estaVacioLocalmente = Object.keys(productos).length === 0 && Object.keys(clientes).length === 0 && ventasDelDia.length === 0;
+
+            const datosAEnviar = { 
+                token, 
+                productos: estaVacioLocalmente ? null : productos, 
+                clientes: estaVacioLocalmente ? null : clientes, 
+                ventasDelDia: estaVacioLocalmente ? null : ventasDelDia, 
+                historialMensual: estaVacioLocalmente ? null : historialMensual 
+            };
 
             return fetch(url, {
                 method: 'POST',
@@ -606,15 +616,23 @@
             .then(response => {
                 if(response.status === "success") {
                     if (response.data) {
-                        productos = response.data.productos || productos;
-                        clientes = response.data.clientes || clientes;
-                        ventasDelDia = response.data.ventasDelDia || ventasDelDia;
-                        historialMensual = response.data.historialMensual || historialMensual;
-
-                        guardarEnDB('productos', productos);
-                        guardarEnDB('clientes', clientes);
-                        guardarEnDB('ventasDelDia', ventasDelDia);
-                        guardarEnDB('historialMensual', historialMensual);
+                        // Si la nube tiene datos pero nosotros estábamos vacíos, o si la nube devuelve información actualizada, la adoptamos
+                        if (response.data.productos && Object.keys(response.data.productos).length > 0) {
+                            productos = response.data.productos;
+                            guardarEnDB('productos', productos);
+                        }
+                        if (response.data.clientes && Object.keys(response.data.clientes).length > 0) {
+                            clientes = response.data.clientes;
+                            guardarEnDB('clientes', clientes);
+                        }
+                        if (response.data.ventasDelDia && response.data.ventasDelDia.length > 0) {
+                            ventasDelDia = response.data.ventasDelDia;
+                            guardarEnDB('ventasDelDia', ventasDelDia);
+                        }
+                        if (response.data.historialMensual && response.data.historialMensual.length > 0) {
+                            historialMensual = response.data.historialMensual;
+                            guardarEnDB('historialMensual', historialMensual);
+                        }
 
                         actualizarTablaProductos();
                         actualizarListaSugerencias();
@@ -660,80 +678,51 @@
             const tbody = document.querySelector('#tabla-clientes tbody');
             tbody.innerHTML = '';
             for (let nombre in clientes) {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${nombre}</td>
-                        <td>${clientes[nombre].telefono}</td>
-                        <td><button type="button" class="btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="eliminarCliente('${nombre}')">Eliminar</button></td>
-                    </tr>
-                `;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${nombre}</td><td>${clientes[nombre].telefono}</td><td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="eliminarCliente('${nombre}')">Eliminar</button></td>`;
+                tbody.appendChild(tr);
             }
         }
 
         function eliminarCliente(nombre) {
-            if (!confirm(`¿Eliminar al cliente ${nombre}?`)) return;
-            delete clientes[nombre];
-            guardarEnDB('clientes', clientes, () => {
-                actualizarTablaClientes();
-                actualizarSelectClientes();
-                sincronizarBidireccional(true);
-            });
+            if (confirm(`¿Eliminar al cliente ${nombre}?`)) {
+                delete clientes[nombre];
+                guardarEnDB('clientes', clientes, () => {
+                    actualizarTablaClientes();
+                    actualizarSelectClientes();
+                    sincronizarBidireccional(true);
+                });
+            }
         }
 
         function actualizarSelectClientes() {
             const select = document.getElementById('venta-cliente');
-            let html = '<option value="Público General">Público General</option>';
+            const actual = select.value;
+            select.innerHTML = '<option value="Público General">Público General</option>';
             for (let nombre in clientes) {
-                html += `<option value="${nombre}">${nombre}</option>`;
+                const opt = document.createElement('option');
+                opt.value = nombre;
+                opt.textContent = nombre;
+                select.appendChild(opt);
             }
-            select.innerHTML = html;
+            select.value = actual;
         }
 
-        // PRODUCTOS & IMAGENES
-        function cargarDatosProductoEnFormulario() {
-            const codigo = document.getElementById('prod-codigo').value.trim();
-            const prod = productos[codigo];
-            const divPreview = document.getElementById('contenedor-preview-imagen');
-            
-            if (prod) {
-                document.getElementById('prod-nombre').value = prod.nombre;
-                document.getElementById('prod-costo').value = prod.costo;
-                document.getElementById('prod-precio').value = prod.precio;
-                document.getElementById('prod-stock').value = prod.stock;
-                if (prod.imagen) {
-                    divPreview.innerHTML = `<img src="${prod.imagen}" class="img-preview-form">`;
-                } else {
-                    divPreview.innerHTML = '';
-                }
-            } else {
-                document.getElementById('prod-nombre').value = '';
-                document.getElementById('prod-costo').value = '';
-                document.getElementById('prod-precio').value = '';
-                document.getElementById('prod-stock').value = '';
-                divPreview.innerHTML = '';
-            }
-        }
-
+        // PRODUCTOS
         document.getElementById('form-producto').addEventListener('submit', function(e) {
             e.preventDefault();
             const codigo = document.getElementById('prod-codigo').value.trim();
             const nombre = document.getElementById('prod-nombre').value.trim();
-            const costo = parseFloat(document.getElementById('prod-costo').value) || 0;
-            const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
-            const stock = parseInt(document.getElementById('prod-stock').value) || 0;
-            const archivoInput = document.getElementById('prod-imagen');
+            const costo = parseFloat(document.getElementById('prod-costo').value);
+            const precio = parseFloat(document.getElementById('prod-precio').value);
+            const stock = parseInt(document.getElementById('prod-stock').value);
+            const fileInput = document.getElementById('prod-imagen');
 
             if (!codigo || !nombre) return;
 
-            function guardarDatosFinales(imagenBase64) {
-                productos[codigo] = {
-                    nombre,
-                    costo,
-                    precio,
-                    stock,
-                    imagen: imagenBase64 || (productos[codigo] ? productos[codigo].imagen : '')
-                };
-
+            const guardarDatosProd = (imgData) => {
+                const imgFinal = imgData || (productos[codigo] ? productos[codigo].img : '');
+                productos[codigo] = { nombre, costo, precio, stock, img: imgFinal };
                 guardarEnDB('productos', productos, () => {
                     actualizarTablaProductos();
                     actualizarListaSugerencias();
@@ -741,18 +730,39 @@
                     document.getElementById('contenedor-preview-imagen').innerHTML = '';
                     sincronizarBidireccional(true);
                 });
-            }
+            };
 
-            if (archivoInput.files && archivoInput.files[0]) {
+            if (fileInput.files && fileInput.files[0]) {
                 const reader = new FileReader();
-                reader.onload = function(uploadEvent) {
-                    guardarDatosFinales(uploadEvent.target.result);
-                };
-                reader.readAsDataURL(archivoInput.files[0]);
+                reader.onload = function(evt) { guardarDatosProd(evt.target.result); };
+                reader.readAsDataURL(fileInput.files[0]);
             } else {
-                guardarDatosFinales(null);
+                guardarDatosProd(null);
             }
         });
+
+        function cargarDatosProductoEnFormulario() {
+            const codigo = document.getElementById('prod-codigo').value.trim();
+            const prod = productos[codigo];
+            const preview = document.getElementById('contenedor-preview-imagen');
+            if (prod) {
+                document.getElementById('prod-nombre').value = prod.nombre;
+                document.getElementById('prod-costo').value = prod.costo;
+                document.getElementById('prod-precio').value = prod.precio;
+                document.getElementById('prod-stock').value = prod.stock;
+                if (prod.img) {
+                    preview.innerHTML = `<img src="${prod.img}" class="img-preview-form">`;
+                } else {
+                    preview.innerHTML = '';
+                }
+            } else {
+                document.getElementById('prod-nombre').value = '';
+                document.getElementById('prod-costo').value = '';
+                document.getElementById('prod-precio').value = '';
+                document.getElementById('prod-stock').value = '';
+                preview.innerHTML = '';
+            }
+        }
 
         function actualizarTablaProductos() {
             const tbody = document.querySelector('#tabla-productos tbody');
@@ -762,54 +772,50 @@
             for (let codigo in productos) {
                 const p = productos[codigo];
                 inversionTotal += (p.costo * p.stock);
-                const imgTag = p.imagen 
-                    ? `<img src="${p.imagen}" class="img-preview-table" title="Haz clic para cambiar imagen" onclick="dispararCambioImagen('${codigo}')">` 
-                    : `<button type="button" class="btn-info" style="padding:2px 4px; font-size:0.7rem;" title="Agregar imagen" onclick="dispararCambioImagen('${codigo}')">+Img</button>`;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${imgTag}</td>
-                        <td>${codigo}</td>
-                        <td>${p.nombre}</td>
-                        <td>$${p.costo.toFixed(2)}</td>
-                        <td>$${p.precio.toFixed(2)}</td>
-                        <td><input type="number" class="input-stock-table" value="${p.stock}" onchange="cambiarStockDirecto('${codigo}', this.value)"></td>
-                        <td><button type="button" class="btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="eliminarProducto('${codigo}')">X</button></td>
-                    </tr>
+                const imgHtml = p.img ? `<img src="${p.img}" class="img-preview-table" title="Cambiar imagen" onclick="dispararCambioImagen('${codigo}')">` : `<button type="button" style="padding:2px 4px; font-size:0.7rem;" onclick="dispararCambioImagen('${codigo}')">+Img</button>`;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${imgHtml}</td>
+                    <td>${codigo}</td>
+                    <td>${p.nombre}</td>
+                    <td>$${p.costo.toFixed(2)}</td>
+                    <td>$${p.precio.toFixed(2)}</td>
+                    <td><input type="number" class="input-stock-table" value="${p.stock}" onchange="actualizarStockDirecto('${codigo}', this.value)"></td>
+                    <td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="eliminarProducto('${codigo}')">Eliminar</button></td>
                 `;
+                tbody.appendChild(tr);
             }
             document.getElementById('inversion-total-inventario').innerText = inversionTotal.toFixed(2);
         }
 
         function dispararCambioImagen(codigo) {
             codigoProductoActualizandoImagen = codigo;
-            document.getElementById('input-cambiar-imagen-global').value = '';
             document.getElementById('input-cambiar-imagen-global').click();
         }
 
         function procesarCambioImagenTabla(event) {
-            const archivo = event.target.files[0];
-            if (!archivo || !codigoProductoActualizandoImagen) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const nuevaImagenBase64 = e.target.result;
-                if (productos[codigoProductoActualizandoImagen]) {
-                    productos[codigoProductoActualizandoImagen].imagen = nuevaImagenBase64;
-                    guardarEnDB('productos', productos, () => {
-                        actualizarTablaProductos();
-                        sincronizarBidireccional(true);
-                        alert('¡Imagen del producto actualizada con éxito!');
-                    });
-                }
-                codigoProductoActualizandoImagen = null;
-            };
-            reader.readAsDataURL(archivo);
+            const file = event.target.files[0];
+            if (file && codigoProductoActualizandoImagen) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (productos[codigoProductoActualizandoImagen]) {
+                        productos[codigoProductoActualizandoImagen].img = e.target.result;
+                        guardarEnDB('productos', productos, () => {
+                            actualizarTablaProductos();
+                            sincronizarBidireccional(true);
+                        });
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+            event.target.value = '';
         }
 
-        function cambiarStockDirecto(codigo, nuevoStock) {
-            if (productos[codigo]) {
-                productos[codigo].stock = parseInt(nuevoStock) || 0;
+        function actualizarStockDirecto(codigo, nuevoStock) {
+            const stockVal = parseInt(nuevoStock);
+            if (productos[codigo] && !isNaN(stockVal)) {
+                productos[codigo].stock = stockVal;
                 guardarEnDB('productos', productos, () => {
                     actualizarTablaProductos();
                     sincronizarBidireccional(true);
@@ -818,152 +824,141 @@
         }
 
         function eliminarProducto(codigo) {
-            if (!confirm(`¿Desea eliminar el producto con código ${codigo}?`)) return;
-            delete productos[codigo];
-            guardarEnDB('productos', productos, () => {
-                actualizarTablaProductos();
-                actualizarListaSugerencias();
-                sincronizarBidireccional(true);
-            });
+            if (confirm(`¿Eliminar producto ${codigo}?`)) {
+                delete productos[codigo];
+                guardarEnDB('productos', productos, () => {
+                    actualizarTablaProductos();
+                    actualizarListaSugerencias();
+                    sincronizarBidireccional(true);
+                });
+            }
         }
 
         function actualizarListaSugerencias() {
             const datalist = document.getElementById('lista-sugerencias-productos');
-            let html = '';
+            datalist.innerHTML = '';
             for (let codigo in productos) {
                 const p = productos[codigo];
-                html += `<option value="${codigo}">[${codigo}] ${p.nombre} - Stock: ${p.stock}</option>`;
+                const opt = document.createElement('option');
+                opt.value = `${codigo} - ${p.nombre}`;
+                datalist.appendChild(opt);
             }
-            datalist.innerHTML = html;
         }
 
-        // CARRITO Y VENTAS
-        document.getElementById('form-venta').addEventListener('submit', function(e) {
+        // VENTAS Y CARRITO
+        function agregarProductoAlCarritoDesdeForm(e) {
             e.preventDefault();
-            const busquedaInput = document.getElementById('venta-busqueda');
-            const valorBusqueda = busquedaInput.value.trim();
-            if (!valorBusqueda) return;
+            const inputVal = document.getElementById('venta-busqueda').value.trim();
+            if (!inputVal) return;
 
-            let codigoEncontrado = null;
-            if (productos[valorBusqueda]) {
-                codigoEncontrado = valorBusqueda;
-            } else {
-                for (let codigo in productos) {
-                    if (productos[codigo].nombre.toLowerCase() === valorBusqueda.toLowerCase()) {
-                        codigoEncontrado = codigo;
+            let codigo = inputVal.split(' - ')[0].trim();
+            let prod = productos[codigo];
+
+            if (!prod) {
+                for (let c in productos) {
+                    if (productos[c].nombre.toLowerCase() === inputVal.toLowerCase()) {
+                        codigo = c;
+                        prod = productos[c];
                         break;
                     }
                 }
             }
 
-            if (!codigoEncontrado) {
-                alert('Producto no encontrado en el inventario.');
+            if (!prod) {
+                alert('Producto no encontrado.');
                 return;
             }
 
-            const p = productos[codigoEncontrado];
-            if (p.stock <= 0) {
+            if (prod.stock <= 0) {
                 alert('¡No hay stock disponible para este producto!');
                 return;
             }
 
-            const itemExistente = carrito.find(item => item.codigo === codigoEncontrado);
+            const itemExistente = carrito.find(i => i.codigo === codigo);
             if (itemExistente) {
-                if (itemExistente.cantidad + 1 > p.stock) {
-                    alert('No puedes agregar más de la cantidad disponible en stock.');
+                if (itemExistente.cantidad + 1 > prod.stock) {
+                    alert('No hay suficiente stock disponible.');
                     return;
                 }
                 itemExistente.cantidad += 1;
             } else {
                 carrito.push({
-                    codigo: codigoEncontrado,
-                    nombre: p.nombre,
-                    precio: p.precio,
-                    costo: p.costo,
-                    cantidad: 0,
-                    descuentoUnitario: 0,
-                    tipoDescuentoUnitario: 'monto'
+                    codigo,
+                    nombre: prod.nombre,
+                    costo: prod.costo,
+                    precio: prod.precio,
+                    cantidad: 1,
+                    descuento: 0,
+                    tipoDescuento: '$'
                 });
             }
 
-            busquedaInput.value = '';
+            document.getElementById('venta-busqueda').value = '';
             actualizarTablaCarrito();
-        });
+        }
 
         function actualizarTablaCarrito() {
             const tbody = document.querySelector('#tabla-carrito tbody');
             tbody.innerHTML = '';
-            let totalGlobal = 0;
+            let total = 0;
 
             carrito.forEach((item, index) => {
-                let descUnit = item.descuentoUnitario || 0;
-                let descuentoCalculadoPorUnidad = 0;
-
-                if (item.tipoDescuentoUnitario === 'porcentaje') {
-                    descuentoCalculadoPorUnidad = (item.precio * descUnit) / 100;
+                let descUnitario = item.descuento || 0;
+                let precioEfectivo = item.precio;
+                if (item.tipoDescuento === '$') {
+                    precioEfectivo = Math.max(0, item.precio - descUnitario);
                 } else {
-                    descuentoCalculadoPorUnidad = descUnit;
+                    precioEfectivo = Math.max(0, item.precio * (1 - (descUnitario / 100)));
                 }
 
-                if (descuentoCalculadoPorUnidad > item.precio) {
-                    descuentoCalculadoPorUnidad = item.precio;
-                }
+                const subtotal = precioEfectivo * item.cantidad;
+                total += subtotal;
 
-                const precioFinalUnitario = item.precio - descuentoCalculadoPorUnidad;
-                const cantidadValida = item.cantidad || 0;
-                const subtotalItem = precioFinalUnitario * cantidadValida;
-                totalGlobal += subtotalItem;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${item.nombre}</td>
-                        <td><input type="number" class="input-carrito-cant" value="${item.cantidad === 0 ? '' : item.cantidad}" placeholder="0" min="0" oninput="cambiarCantidadCarrito(${index}, this.value)"></td>
-                        <td>$${item.precio.toFixed(2)}</td>
-                        <td><input type="number" step="0.01" class="input-carrito-desc" value="${item.descuentoUnitario || ''}" placeholder="0" oninput="cambiarDescuentoUnitario(${index}, this.value)"></td>
-                        <td>
-                            <select style="width:75px; padding:2px; font-size:0.75rem;" onchange="cambiarTipoDescuentoUnitario(${index}, this.value)">
-                                <option value="monto" ${item.tipoDescuentoUnitario === 'monto' ? 'selected' : ''}>$</option>
-                                <option value="porcentaje" ${item.tipoDescuentoUnitario === 'porcentaje' ? 'selected' : ''}>%</option>
-                            </select>
-                        </td>
-                        <td><strong>$${subtotalItem.toFixed(2)}</strong></td>
-                        <td><button type="button" class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="eliminarItemCarrito(${index})">X</button></td>
-                    </tr>
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.nombre}</td>
+                    <td><input type="number" class="input-carrito-cant" value="${item.cantidad}" min="1" onchange="cambiarCantidadCarrito(${index}, this.value)"></td>
+                    <td>$${item.precio.toFixed(2)}</td>
+                    <td><input type="number" class="input-carrito-desc" value="${item.descuento}" min="0" step="0.01" onchange="cambiarDescuentoCarrito(${index}, this.value)"></td>
+                    <td>
+                        <select style="width:50px; padding:2px;" onchange="cambiarTipoDescuentoCarrito(${index}, this.value)">
+                            <option value="$" ${item.tipoDescuento === '$' ? 'selected' : ''}>$</option>
+                            <option value="%" ${item.tipoDescuento === '%' ? 'selected' : ''}>%</option>
+                        </select>
+                    </td>
+                    <td>$${subtotal.toFixed(2)}</td>
+                    <td><button class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="eliminarItemCarrito(${index})">X</button></td>
                 `;
+                tbody.appendChild(tr);
             });
 
-            document.getElementById('total-venta').innerText = totalGlobal.toFixed(2);
+            document.getElementById('total-venta').innerText = total.toFixed(2);
             calcularCambio();
         }
 
         function cambiarCantidadCarrito(index, nuevaCant) {
-            const cantidad = parseInt(nuevaCant);
-            const item = carrito[index];
-            const p = productos[item.codigo];
-
-            if (isNaN(cantidad)) {
-                item.cantidad = 0;
-                actualizarTablaCarrito();
-                return;
+            const val = parseInt(nuevaCant);
+            if (isNaN(val) || val <= 0) {
+                carrito[index].cantidad = 1;
+            } else {
+                const codigo = carrito[index].codigo;
+                if (val > productos[codigo].stock) {
+                    alert('Stock insuficiente.');
+                    carrito[index].cantidad = productos[codigo].stock;
+                } else {
+                    carrito[index].cantidad = val;
+                }
             }
-
-            if (p && cantidad > p.stock) {
-                alert('Stock insuficiente.');
-                item.cantidad = p.stock;
-                actualizarTablaCarrito();
-                return;
-            }
-            item.cantidad = cantidad;
             actualizarTablaCarrito();
         }
 
-        function cambiarDescuentoUnitario(index, valor) {
-            carrito[index].descuentoUnitario = parseFloat(valor) || 0;
+        function cambiarDescuentoCarrito(index, nuevoDesc) {
+            carrito[index].descuento = Math.max(0, parseFloat(nuevoDesc) || 0);
             actualizarTablaCarrito();
         }
 
-        function cambiarTipoDescuentoUnitario(index, tipo) {
-            carrito[index].tipoDescuentoUnitario = tipo;
+        function cambiarTipoDescuentoCarrito(index, nuevoTipo) {
+            carrito[index].tipoDescuento = nuevoTipo;
             actualizarTablaCarrito();
         }
 
@@ -983,14 +978,10 @@
         }
 
         function calcularCambio() {
-            const metodo = document.getElementById('metodo-pago').value;
-            if (metodo !== 'Efectivo') return;
-
-            const totalVenta = parseFloat(document.getElementById('total-venta').innerText) || 0;
-            const montoPagado = parseFloat(document.getElementById('monto-pagado').value) || 0;
-            const cambio = montoPagado - totalVenta;
-
-            document.getElementById('monto-cambio').innerText = cambio >= 0 ? cambio.toFixed(2) : '0.00';
+            const total = parseFloat(document.getElementById('total-venta').innerText) || 0;
+            const pagado = parseFloat(document.getElementById('monto-pagado').value) || 0;
+            const cambio = Math.max(0, pagado - total);
+            document.getElementById('monto-cambio').innerText = cambio.toFixed(2);
         }
 
         function procesarVenta() {
@@ -999,338 +990,271 @@
                 return;
             }
 
-            for (let item of carrito) {
-                if (!item.cantidad || item.cantidad <= 0) {
-                    alert(`El producto "${item.nombre}" tiene una cantidad de 0 o vacía.`);
-                    return;
-                }
-            }
-
             const cliente = document.getElementById('venta-cliente').value;
             const metodoPago = document.getElementById('metodo-pago').value;
-            
-            let subtotalSinDescuentoGlobal = 0;
-            let totalConDescuentoGlobal = 0;
-            let costoTotalItem = 0;
-
-            const itemsProcesados = carrito.map(item => {
-                let descUnit = item.descuentoUnitario || 0;
-                let descuentoCalc = item.tipoDescuentoUnitario === 'porcentaje' ? (item.precio * descUnit) / 100 : descUnit;
-                if (descuentoCalc > item.precio) descuentoCalc = item.precio;
-
-                const precioFinalUnit = item.precio - descuentoCalc;
-                const subtotalItemReal = precioFinalUnit * item.cantidad;
-                const subtotalItemIdeal = item.precio * item.cantidad;
-                const costoItemTotal = item.costo * item.cantidad;
-
-                subtotalSinDescuentoGlobal += subtotalItemIdeal;
-                totalConDescuentoGlobal += subtotalItemReal;
-                costoTotalItem += costoItemTotal;
-
-                return {
-                    codigo: item.codigo,
-                    nombre: item.nombre,
-                    precioOriginal: item.precio,
-                    descuentoUnitarioAplicado: descuentoCalc,
-                    tipoDescuento: item.tipoDescuentoUnitario,
-                    precioFinalUnitario: precioFinalUnit,
-                    cantidad: item.cantidad,
-                    subtotalIdeal: subtotalItemIdeal,
-                    subtotalReal: subtotalItemReal,
-                    costoTotal: costoItemTotal
-                };
-            });
+            const totalVenta = parseFloat(document.getElementById('total-venta').innerText);
 
             if (metodoPago === 'Efectivo') {
-                const montoPagado = parseFloat(document.getElementById('monto-pagado').value) || 0;
-                if (montoPagado < totalConDescuentoGlobal) {
+                const pagado = parseFloat(document.getElementById('monto-pagado').value) || 0;
+                if (pagado < totalVenta) {
                     alert('El monto pagado es menor al total de la venta.');
                     return;
                 }
             }
 
+            // Descontar stock y calcular costos y totales reales
+            let costoTotalVenta = 0;
+            let ingresoRealVenta = totalVenta;
+
             carrito.forEach(item => {
                 if (productos[item.codigo]) {
                     productos[item.codigo].stock -= item.cantidad;
+                    costoTotalVenta += (productos[item.codigo].costo * item.cantidad);
                 }
             });
 
-            const fechaHora = new Date().toLocaleString();
-            const descuentoTotalGlobal = subtotalSinDescuentoGlobal - totalConDescuentoGlobal;
-
-            const ventaCompleta = {
-                fecha: fechaHora,
+            const nuevaVenta = {
+                id: 'V-' + Date.now(),
+                fecha: new Date().toLocaleString(),
                 cliente,
-                items: itemsProcesados,
-                subtotal: subtotalSinDescuentoGlobal,
-                descuento: descuentoTotalGlobal,
-                total: totalConDescuentoGlobal,
-                costo: costoTotalItem,
-                metodoPago
+                metodoPago,
+                items: JSON.parse(JSON.stringify(carrito)),
+                total: totalVenta,
+                costo: costoTotalVenta,
+                ganancia: totalVenta - costoTotalVenta
             };
 
-            ventasDelDia.push(ventaCompleta);
-            ultimaVentaRealizada = ventaCompleta;
+            ventasDelDia.push(nuevaVenta);
+            ultimaVentaRealizada = nuevaVenta;
 
+            // Guardar cambios
             guardarEnDB('productos', productos);
             guardarEnDB('ventasDelDia', ventasDelDia, () => {
                 actualizarTablaProductos();
-                actualizarListaSugerencias();
                 actualizarVistaCorte();
                 actualizarVistaBalance();
 
+                // Limpiar carrito
                 carrito = [];
-                document.getElementById('monto-pagado').value = '';
                 actualizarTablaCarrito();
+                document.getElementById('monto-pagado').value = '';
+                document.getElementById('btn-imprimir-ultimo').disabled = false;
 
-                document.getElementById('btn-imprimir-ultimo').removeAttribute('disabled');
                 sincronizarBidireccional(true);
                 alert('¡Venta completada con éxito!');
             });
         }
 
-        // TICKET PDF (jsPDF)
         function visualizarUltimoTicketPDF() {
             if (!ultimaVentaRealizada) return;
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ unit: 'mm', format: [80, 160] });
+            const doc = new jsPDF({ unit: 'mm', format: [80, 150] });
 
             doc.setFont("Helvetica", "bold");
-            doc.setFontSize(11);
+            doc.setFontSize(12);
             doc.text("TRANZAKS - TICKET DE VENTA", 40, 10, { align: "center" });
-
-            doc.setFontSize(8);
+            
             doc.setFont("Helvetica", "normal");
-            doc.text(`Fecha: ${ultimaVentaRealizada.fecha}`, 5, 17);
-            doc.text(`Cliente: ${ultimaVentaRealizada.cliente}`, 5, 22);
-            doc.text(`Pago: ${ultimaVentaRealizada.metodoPago}`, 5, 27);
+            doc.setFontSize(8);
+            doc.text(`Fecha: ${ultimaVentaRealizada.fecha}`, 5, 18);
+            doc.text(`Cliente: ${ultimaVentaRealizada.cliente}`, 5, 23);
+            doc.text(`Pago: ${ultimaVentaRealizada.metodoPago}`, 5, 28);
+            doc.text("----------------------------------------------------------------", 5, 33);
 
-            doc.line(5, 30, 75, 30);
-            let y = 35;
-            doc.text("Cant / Producto", 5, y);
-            doc.text("Subtotal", 60, y);
+            let y = 38;
+            doc.text("Cant  Producto          P.Unit    Subtotal", 5, y);
+            y += 5;
+            doc.text("----------------------------------------------------------------", 5, y);
             y += 5;
 
             ultimaVentaRealizada.items.forEach(item => {
-                doc.text(`${item.cantidad} x ${item.nombre}`, 5, y);
-                doc.text(`$${item.subtotalReal.toFixed(2)}`, 60, y);
-                y += 4;
-                if (item.descuentoUnitarioAplicado > 0) {
-                    doc.setFont("Helvetica", "italic");
-                    doc.setFontSize(7);
-                    doc.text(`   (Desc. unit: -$${item.descuentoUnitarioAplicado.toFixed(2)})`, 5, y);
-                    doc.setFont("Helvetica", "normal");
-                    doc.setFontSize(8);
-                    y += 4;
-                }
-                y += 1;
+                let pEfectivo = item.precio;
+                if (item.tipoDescuento === '$') pEfectivo = Math.max(0, item.precio - item.descuento);
+                else pEfectivo = Math.max(0, item.precio * (1 - item.descuento / 100));
+
+                let sub = pEfectivo * item.cantidad;
+                doc.text(`${item.cantidad}x ${item.nombre.substring(0, 12)} $${pEfectivo.toFixed(2)} $${sub.toFixed(2)}`, 5, y);
+                y += 5;
             });
 
-            doc.line(5, y, 75, y);
+            doc.text("----------------------------------------------------------------", 5, y);
             y += 5;
-
-            if (ultimaVentaRealizada.descuento > 0) {
-                doc.text(`Valor Inicial: $${ultimaVentaRealizada.subtotal.toFixed(2)}`, 5, y);
-                y += 4;
-                doc.text(`Descuentos: -$${ultimaVentaRealizada.descuento.toFixed(2)}`, 5, y);
-                y += 5;
-            }
-
             doc.setFont("Helvetica", "bold");
             doc.setFontSize(10);
-            doc.text(`TOTAL: $${ultimaVentaRealizada.total.toFixed(2)}`, 5, y);
+            doc.text(`TOTAL: $${ultimaVentaRealizada.total.toFixed(2)}`, 75, y, { align: "right" });
 
-            doc.setFontSize(8);
-            doc.setFont("Helvetica", "italic");
-            doc.text("¡Gracias por su compra!", 40, y + 10, { align: "center" });
-
-            const pdfData = doc.output('datauristring');
-            const ventana = window.open();
-            ventana.document.write(`<iframe width='100%' height='100%' src='${pdfData}'></iframe>`);
+            window.open(doc.output('bloburl'), '_blank');
         }
 
         // CORTE Y BALANCE
         function actualizarVistaCorte() {
-            let ingresosBrutos = 0;
-            let costoTotal = 0;
-            const tbody = document.querySelector('#tabla-historial tbody');
-            tbody.innerHTML = '';
-
-            ventasDelDia.forEach((v, index) => {
-                ingresosBrutos += v.total;
-                costoTotal += v.costo;
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${v.fecha}<br><small>${v.cliente}</small></td>
-                        <td>$${v.total.toFixed(2)}</td>
-                        <td>${v.metodoPago}</td>
-                        <td><button type="button" class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="eliminarVentaDia(${index})">X</button></td>
-                    </tr>
-                `;
-            });
-
-            const gananciaNeta = ingresosBrutos - costoTotal;
-
-            document.getElementById('cant-ventas').innerText = ventasDelDia.length;
-            document.getElementById('total-ingresos').innerText = ingresosBrutos.toFixed(2);
-            document.getElementById('total-costos').innerText = costoTotal.toFixed(2);
-            document.getElementById('total-ganancia').innerText = gananciaNeta.toFixed(2);
-        }
-
-        function eliminarVentaDia(index) {
-            if (!confirm('¿Desea cancelar esta venta del día?')) return;
-            const v = ventasDelDia[index];
-            v.items.forEach(item => {
-                if (productos[item.codigo]) {
-                    productos[item.codigo].stock += item.cantidad;
-                }
-            });
-            ventasDelDia.splice(index, 1);
-            guardarEnDB('productos', productos);
-            guardarEnDB('ventasDelDia', ventasDelDia, () => {
-                actualizarTablaProductos();
-                actualizarVistaCorte();
-                actualizarVistaBalance();
-                sincronizarBidireccional(true);
-            });
-        }
-
-        function actualizarVistaBalance() {
-            let ingresosNetos = 0;
-            let costosNetos = 0;
-            let ingresosSinDesc = 0;
-            let costosSinDesc = 0;
-            const productosVendidosMap = {};
+            let cantVentas = ventasDelDia.length;
+            let totalIngresos = 0;
+            let totalCostos = 0;
+            let totalGanancia = 0;
 
             ventasDelDia.forEach(v => {
-                ingresosNetos += v.total;
-                costosNetos += v.costo;
-                ingresosSinDesc += v.subtotal;
-                costosSinDesc += v.costo;
-
-                v.items.forEach(item => {
-                    if (!productosVendidosMap[item.codigo]) {
-                        productosVendidosMap[item.codigo] = {
-                            nombre: item.nombre,
-                            cantidad: 0,
-                            ingresoReal: 0,
-                            costo: 0
-                        };
-                    }
-                    productosVendidosMap[item.codigo].cantidad += item.cantidad;
-                    productosVendidosMap[item.codigo].ingresoReal += item.subtotalReal;
-                    productosVendidosMap[item.codigo].costo += item.costoTotal;
-                });
+                totalIngresos += v.total;
+                totalCostos += v.costo;
+                totalGanancia += v.ganancia;
             });
 
-            const gananciaNetaActual = ingresosNetos - costosNetos;
-            document.getElementById('balance-ingresos').innerText = ingresosNetos.toFixed(2);
-            document.getElementById('balance-egresos').innerText = costosNetos.toFixed(2);
-            document.getElementById('balance-ganancia').innerText = gananciaNetaActual.toFixed(2);
+            document.getElementById('cant-ventas').innerText = cantVentas;
+            document.getElementById('total-ingresos').innerText = totalIngresos.toFixed(2);
+            document.getElementById('total-costos').innerText = totalCostos.toFixed(2);
+            document.getElementById('total-ganancia').innerText = totalGanancia.toFixed(2);
 
-            document.getElementById('bal-ing-desc').innerText = ingresosNetos.toFixed(2);
-            document.getElementById('bal-cos-desc').innerText = costosNetos.toFixed(2);
-            document.getElementById('bal-gan-desc').innerText = gananciaNetaActual.toFixed(2);
-
-            const gananciaNorm = ingresosSinDesc - costosSinDesc;
-            document.getElementById('bal-ing-normal').innerText = ingresosSinDesc.toFixed(2);
-            document.getElementById('bal-cos-normal').innerText = costosSinDesc.toFixed(2);
-            document.getElementById('bal-gan-normal').innerText = gananciaNorm.toFixed(2);
-
-            const tbody = document.querySelector('#tabla-balance-productos tbody');
+            const tbody = document.querySelector('#tabla-historial tbody');
             tbody.innerHTML = '';
-            for (let codigo in productosVendidosMap) {
-                const pv = productosVendidosMap[codigo];
-                const gananciaProd = pv.ingresoReal - pv.costo;
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${pv.nombre}</td>
-                        <td>${pv.cantidad}</td>
-                        <td>$${pv.ingresoReal.toFixed(2)}</td>
-                        <td>$${pv.costo.toFixed(2)}</td>
-                        <td>$${gananciaProd.toFixed(2)}</td>
-                    </tr>
-                `;
+            ventasDelDia.slice().reverse().forEach(v => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${v.fecha}<br><small>${v.cliente}</small></td><td>$${v.total.toFixed(2)}</td><td>${v.metodoPago}</td><td><button class="btn-danger" style="padding:2px 6px; font-size:0.75rem;" onclick="eliminarVenta('${v.id}')">X</button></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function eliminarVenta(id) {
+            if (confirm('¿Estás seguro de eliminar esta venta del día?')) {
+                const index = ventasDelDia.findIndex(v => v.id === id);
+                if (index !== -1) {
+                    ventasDelDia.splice(index, 1);
+                    guardarEnDB('ventasDelDia', ventasDelDia, () => {
+                        actualizarVistaCorte();
+                        actualizarVistaBalance();
+                        sincronizarBidireccional(true);
+                    });
+                }
             }
         }
 
         function reiniciarDia() {
-            if (!confirm('¿Realizar corte diario y cerrar caja? Esta acción archivará las ventas del día.')) return;
-            
-            if (ventasDelDia.length > 0) {
-                const fechaHoy = new Date().toISOString().split('T')[0];
-                let totalDia = ventasDelDia.reduce((acc, v) => acc + v.total, 0);
-                let gananciaDia = ventasDelDia.reduce((acc, v) => acc + (v.total - v.costo), 0);
+            if (confirm('¿Realizar el corte diario y cerrar caja? Esto archivará las ventas del día al historial mensual y limpiará el registro diario.')) {
+                if (ventasDelDia.length > 0) {
+                    let totalIng = 0;
+                    let totalGan = 0;
+                    ventasDelDia.forEach(v => {
+                        totalIng += v.total;
+                        totalGan += v.ganancia;
+                    });
 
-                historialMensual.push({
-                    fecha: fechaHoy,
-                    ventasCount: ventasDelDia.length,
-                    total: totalDia,
-                    ganancia: gananciaDia,
-                    detalleVentas: [...ventasDelDia]
-                });
+                    const fechaStr = new Date().toISOString().split('T')[0];
+                    historialMensual.push({
+                        fecha: fechaStr,
+                        ventas: ventasDelDia.length,
+                        total: totalIng,
+                        ganancia: totalGan,
+                        detalleVentas: [...ventasDelDia]
+                    });
+
+                    guardarEnDB('historialMensual', historialMensual);
+                }
 
                 ventasDelDia = [];
-                guardarEnDB('historialMensual', historialMensual);
                 guardarEnDB('ventasDelDia', ventasDelDia, () => {
                     actualizarVistaCorte();
                     actualizarVistaBalance();
                     sincronizarBidireccional(true);
-                    alert('Corte de caja completado con éxito.');
+                    alert('¡Caja cerrada correctamente y guardada en el historial mensual!');
                 });
-            } else {
-                alert('No hay ventas registradas hoy para cerrar.');
             }
         }
 
-        // MENSUAL
-        function cargarOpcionesMeses() {
-            const select = document.getElementById('select-mes-filtro');
-            const mesesMap = {};
-            
-            historialMensual.forEach(h => {
-                const mesAnio = h.fecha.substring(0, 7);
-                mesesMap[mesAnio] = true;
+        function actualizarVistaBalance() {
+            let ingresosReales = 0;
+            let costosReales = 0;
+            let ingresosNormales = 0;
+            let costosNormales = 0;
+            let mapaProd = {};
+
+            ventasDelDia.forEach(v => {
+                ingresosReales += v.total;
+                costosReales += v.costo;
+
+                v.items.forEach(i => {
+                    let pEfectivo = i.precio;
+                    if (i.tipoDescuento === '$') pEfectivo = Math.max(0, i.precio - i.descuento);
+                    else pEfectivo = Math.max(0, i.precio * (1 - i.descuento / 100));
+
+                    let subReal = pEfectivo * i.cantidad;
+                    let subNormal = i.precio * i.cantidad;
+                    let costoItem = i.costo * i.cantidad;
+
+                    ingresosNormales += subNormal;
+                    costosNormales += costoItem;
+
+                    if (!mapaProd[i.nombre]) {
+                        mapaProd[i.nombre] = { cant: 0, ingresoReal: 0, costo: 0 };
+                    }
+                    mapaProd[i.nombre].cant += i.cantidad;
+                    mapaProd[i.nombre].ingresoReal += subReal;
+                    mapaProd[i.nombre].costo += costoItem;
+                });
             });
 
-            let html = '';
-            for (let mes in mesesMap) {
-                html += `<option value="${mes}">${mes}</option>`;
+            document.getElementById('balance-ingresos').innerText = ingresosReales.toFixed(2);
+            document.getElementById('balance-egresos').innerText = costosReales.toFixed(2);
+            document.getElementById('balance-ganancia').innerText = (ingresosReales - costosReales).toFixed(2);
+
+            document.getElementById('bal-ing-desc').innerText = ingresosReales.toFixed(2);
+            document.getElementById('bal-cos-desc').innerText = costosReales.toFixed(2);
+            document.getElementById('bal-gan-desc').innerText = (ingresosReales - costosReales).toFixed(2);
+
+            document.getElementById('bal-ing-normal').innerText = ingresosNormales.toFixed(2);
+            document.getElementById('bal-cos-normal').innerText = costosNormales.toFixed(2);
+            document.getElementById('bal-gan-normal').innerText = (ingresosNormales - costosNormales).toFixed(2);
+
+            const tbody = document.querySelector('#tabla-balance-productos tbody');
+            tbody.innerHTML = '';
+            for (let nombre in mapaProd) {
+                const p = mapaProd[nombre];
+                const gananciaProd = p.ingresoReal - p.costo;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${nombre}</td><td>${p.cant}</td><td>$${p.ingresoReal.toFixed(2)}</td><td>$${p.costo.toFixed(2)}</td><td>$${gananciaProd.toFixed(2)}</td>`;
+                tbody.appendChild(tr);
             }
-            if (!html) html = '<option value="">Sin registros</option>';
-            select.innerHTML = html;
-            actualizarVistaMensual();
+        }
+
+        // HISTORIAL MENSUAL
+        function cargarOpcionesMeses() {
+            const select = document.getElementById('select-mes-filtro');
+            const mesesDisponibles = [...new Set(historialMensual.map(h => h.fecha.substring(0, 7)))];
+            const actualMes = new Date().toISOString().substring(0, 7);
+            if (!mesesDisponibles.includes(actualMes)) mesesDisponibles.push(actualMes);
+            mesesDisponibles.sort().reverse();
+
+            select.innerHTML = '';
+            mesesDisponibles.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                select.appendChild(opt);
+            });
         }
 
         function actualizarVistaMensual() {
             const mesSeleccionado = document.getElementById('select-mes-filtro').value;
-            const tbody = document.querySelector('#tabla-cortes-mensuales tbody');
-            tbody.innerHTML = '';
+            if (!mesSeleccionado) return;
 
-            let diasCount = 0;
-            let totalMes = 0;
-            let gananciaMes = 0;
+            const filtrados = historialMensual.filter(h => h.fecha.startsWith(mesSeleccionado));
+            let totalIngresos = 0;
+            let totalGanancias = 0;
 
-            historialMensual.forEach(h => {
-                if (h.fecha.startsWith(mesSeleccionado)) {
-                    diasCount++;
-                    totalMes += h.total;
-                    gananciaMes += h.ganancia;
-
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${h.fecha}</td>
-                            <td>${h.ventasCount}</td>
-                            <td>$${h.total.toFixed(2)}</td>
-                            <td>$${h.ganancia.toFixed(2)}</td>
-                        </tr>
-                    `;
-                }
+            filtrados.forEach(f => {
+                totalIngresos += f.total;
+                totalGanancias += f.ganancia;
             });
 
-            document.getElementById('mes-dias').innerText = diasCount;
-            document.getElementById('mes-total-ingresos').innerText = totalMes.toFixed(2);
-            document.getElementById('mes-total-ganancias').innerText = gananciaMes.toFixed(2);
+            document.getElementById('mes-dias').innerText = filtrados.length;
+            document.getElementById('mes-total-ingresos').innerText = totalIngresos.toFixed(2);
+            document.getElementById('mes-total-ganancias').innerText = totalGanancias.toFixed(2);
+
+            const tbody = document.querySelector('#tabla-cortes-mensuales tbody');
+            tbody.innerHTML = '';
+            filtrados.forEach(f => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${f.fecha}</td><td>${f.ventas}</td><td>$${f.total.toFixed(2)}</td><td>$${f.ganancia.toFixed(2)}</td>`;
+                tbody.appendChild(tr);
+            });
         }
     </script>
 </body>

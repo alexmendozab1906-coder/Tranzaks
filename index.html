@@ -170,7 +170,7 @@
 
     <!-- Indicador Flotante de Sincronización -->
     <div id="status-message" class="status-hidden">
-        <span class="spinner"></span> Sincronizando datos...
+        <span class="spinner"></span> Guardando datos...
     </div>
 
     <!-- Input oculto global para cambiar imagen directamente desde la tabla -->
@@ -405,7 +405,7 @@
                 <div class="card">
                     <h2>Conexión con Google Sheets (Anti-Borrado)</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Cada acción guarda una marca de tiempo. Si se detectan datos nuevos en la nube o localmente, se combinan automáticamente sin borrar nada.
+                        Cada acción guarda una marca de tiempo y se envía automáticamente a Google Sheets al presionar guardar.
                     </p>
 
                     <label>URL de Google Apps Script:</label>
@@ -452,7 +452,7 @@
 
         const statusMessage = document.getElementById('status-message');
 
-        function mostrarEstado(mensaje = "Sincronizando...", conSpinner = true) {
+        function mostrarEstado(mensaje = "Guardando...", conSpinner = true) {
             const contenido = conSpinner ? `<span class="spinner"></span> ${mensaje}` : mensaje;
             statusMessage.innerHTML = contenido;
             statusMessage.classList.remove('status-hidden');
@@ -485,19 +485,59 @@
             if (!db.objectStoreNames.contains('almacen')) db.createObjectStore('almacen');
         };
 
+        // FUNCIÓN CENTRAL DE GUARDADO CON ENVÍO INMEDIATO A LA NUBE
         function guardarEnDB(clave, valor, callback) {
             if (!db) return;
             ultimaModificacionLocal = Date.now();
             const transaction = db.transaction(['almacen'], 'readwrite');
             const store = transaction.objectStore('almacen');
-            store.put(valor, clave);
+            
             store.put(ultimaModificacionLocal, 'ultimaModificacionLocal');
             const req = store.put(valor, clave);
+            
             req.onsuccess = () => { 
                 if (callback) callback(); 
-                // Cada vez que cambie algo, intentamos sincronizar en segundo plano de manera segura
-                sincronizacionAutomaticaSegura();
+                // FUERZA EL ENVÍO INMEDIATO A LA NUBE AL GUARDAR
+                sincronizacionInmediataNube();
             };
+        }
+
+        function sincronizacionInmediataNube() {
+            const url = nubeUrlGlobal;
+            const token = nubeTokenGlobal;
+            
+            if (!url) return; // Si no hay URL configurada, omite
+
+            mostrarEstado("Guardando cambios en la nube...", true);
+
+            const paqueteEnvio = { 
+                token, 
+                timestamp: ultimaModificacionLocal,
+                productos, 
+                clientes, 
+                ventasDelDia, 
+                historialMensual 
+            };
+
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(paqueteEnvio)
+            })
+            .then(res => res.json())
+            .then(response => {
+                if (response.status === "success") {
+                    mostrarEstado("¡Guardado en la nube con éxito! ✓", false);
+                    ocultarEstado(1500);
+                } else {
+                    mostrarEstado("Error al guardar en nube", false);
+                    ocultarEstado(2000);
+                }
+            })
+            .catch(() => {
+                mostrarEstado("Sin conexión (Guardado local seguro)", false);
+                ocultarEstado(2000);
+            });
         }
 
         function cargarDatosDesdeDB() {
@@ -564,9 +604,7 @@
             else if (idSeccion === 'sec-mensual') { cargarOpcionesMeses(); actualizarVistaMensual(); }
         }
 
-        // ==========================================
-        // 🔄 SISTEMA DE SINCRONIZACIÓN ANTI-BORRADO (MERGE INTELIGENTE)
-        // ==========================================
+        // LECTURA MANUAL / DESCARGAR DESDE NUBE
         function verificarYObtenerDatosNube(silencioso = false) {
             guardarCredencialesNube();
             const url = nubeUrlGlobal;
@@ -590,26 +628,16 @@
 
                 if (response.status === "success" && response.data) {
                     const nube = response.data;
-                    const timestampNube = nube.timestamp || 0;
 
-                    // FUSIONAR PRODUCTOS (Si hay nuevos en la nube, se descargan sin borrar locales)
                     if (nube.productos) {
                         for (let cod in nube.productos) {
                             if (!productos[cod]) {
                                 productos[cod] = nube.productos[cod];
                                 huboCambiosNuevos = true;
-                            } else {
-                                // Si existe pero el stock o precio difiere, priorizamos el más reciente o mantenemos ambos seguros
-                                if (nube.productos[cod].stock !== productos[cod].stock) {
-                                    // Mantener el stock más actualizado o sumar
-                                    productos[cod] = nube.productos[cod];
-                                    huboCambiosNuevos = true;
-                                }
                             }
                         }
                     }
 
-                    // FUSIONAR CLIENTES
                     if (nube.clientes) {
                         for (let cli in nube.clientes) {
                             if (!clientes[cli]) {
@@ -619,7 +647,6 @@
                         }
                     }
 
-                    // FUSIONAR VENTAS DEL DÍA (Evitando duplicados por ID)
                     if (nube.ventasDelDia && Array.isArray(nube.ventasDelDia)) {
                         const idsLocales = new Set(ventasDelDia.map(v => v.id));
                         nube.ventasDelDia.forEach(vCloud => {
@@ -630,22 +657,10 @@
                         });
                     }
 
-                    // FUSIONAR HISTORIAL MENSUAL
-                    if (nube.historialMensual && Array.isArray(nube.historialMensual)) {
-                        const fechasLocales = new Set(historialMensual.map(h => h.fecha));
-                        nube.historialMensual.forEach(hCloud => {
-                            if (!fechasLocales.has(hCloud.fecha)) {
-                                historialMensual.push(hCloud);
-                                huboCambiosNuevos = true;
-                            }
-                        });
-                    }
-
                     if (huboCambiosNuevos) {
                         guardarEnDB('productos', productos);
                         guardarEnDB('clientes', clientes);
                         guardarEnDB('ventasDelDia', ventasDelDia);
-                        guardarEnDB('historialMensual', historialMensual);
 
                         actualizarTablaProductos();
                         actualizarListaSugerencias();
@@ -656,42 +671,19 @@
                     }
                 }
 
-                // Enviar también nuestros datos locales actualizados a la nube (Fusionado total)
-                const paqueteEnvio = { 
-                    token, 
-                    timestamp: Math.max(ultimaModificacionLocal, Date.now()),
-                    productos, 
-                    clientes, 
-                    ventasDelDia, 
-                    historialMensual 
-                };
-
-                return fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify(paqueteEnvio)
-                });
-            })
-            .then(res => res ? res.json() : null)
-            .then(() => {
                 if (!silencioso) {
-                    mostrarEstado("¡Sincronización completada sin perder datos! ✓", false);
+                    mostrarEstado("¡Sincronización completada! ✓", false);
                     ocultarEstado(2000);
-                    alert('🔄 Se han descargado los datos nuevos de la nube y se han combinado de forma segura.');
+                    alert('🔄 Se han verificado y descargado los datos de la nube correctamente.');
                 }
             })
             .catch(() => {
                 if (!silencioso) {
                     mostrarEstado("Modo Offline", false);
                     ocultarEstado(3000);
-                    alert('Aviso: Estás sin conexión, tus datos locales están seguros en este dispositivo.');
+                    alert('Aviso: Estás sin conexión, tus datos locales están seguros.');
                 }
             });
-        }
-
-        function sincronizacionAutomaticaSegura() {
-            // Se ejecuta de fondo tras cada acción sin interrumpir al usuario
-            verificarYObtenerDatosNube(true);
         }
 
         // CLIENTES
@@ -1065,7 +1057,7 @@
                 document.getElementById('monto-pagado').value = '';
                 document.getElementById('btn-imprimir-ultimo').disabled = false;
 
-                alert('¡Venta completada con éxito y respaldada de forma segura!');
+                alert('¡Venta completada con éxito y respaldada en la nube!');
             });
         }
 

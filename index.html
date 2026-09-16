@@ -426,7 +426,7 @@
                 <div class="card">
                     <h2>Conexión con Google Sheets</h2>
                     <p style="font-size: 0.9rem; color: #555;">
-                        Pega la URL de tu Apps Script y tu Clave Secreta. La aplicación descargará los datos al iniciar de forma automática y sólo enviará actualizaciones cuando realices cambios directos (como agregar/eliminar productos o clientes, o realizar ventas).
+                        Pega la URL de tu Apps Script y tu Clave Secreta. Los datos se guardan de forma segura en tu dispositivo y se envían automáticamente a la nube cuando realizas cambios (como agregar/eliminar productos o clientes, o realizar ventas).
                     </p>
 
                     <label>URL de Google Apps Script:</label>
@@ -469,7 +469,6 @@
         
         let nubeUrlGlobal = "";
         let nubeTokenGlobal = "";
-        let intentoSyncIniciado = false;
 
         const statusMessage = document.getElementById('status-message');
 
@@ -526,21 +525,13 @@
             store.get('nubeUrl').onsuccess = (e) => { 
                 nubeUrlGlobal = e.target.result || "";
                 document.getElementById('nube-database-url').value = nubeUrlGlobal;
-                intentarDescargaInicial();
+                // NOTA: Se eliminó cualquier intento de descarga automática al iniciar para proteger los datos locales.
             };
             store.get('nubeToken').onsuccess = (e) => { 
                 nubeTokenGlobal = e.target.result || "";
                 document.getElementById('nube-token').value = nubeTokenGlobal;
-                intentarDescargaInicial();
             };
             store.get('nipSeguridad').onsuccess = (e) => { nipSeguridad = e.target.result || ""; actualizarInterfazNIP(); };
-        }
-
-        function intentarDescargaInicial() {
-            if (nubeUrlGlobal && !intentoSyncIniciado) {
-                intentoSyncIniciado = true;
-                setTimeout(() => descargarDatosNube(true), 400);
-            }
         }
 
         function guardarCredencialesNube() {
@@ -586,13 +577,16 @@
             else if (idSeccion === 'sec-mensual') { cargarOpcionesMeses(); actualizarVistaMensual(); }
         }
 
-        // 1. DESCARGAR DATOS DE LA NUBE (Única dirección automática al iniciar)
+        // 1. DESCARGAR DATOS DE LA NUBE (Exclusivamente Manual)
         function descargarDatosNube(silencioso = false) {
             guardarCredencialesNube();
             const url = nubeUrlGlobal;
             const token = nubeTokenGlobal;
             
-            if (!url) return Promise.resolve();
+            if (!url) {
+                if (!silencioso) alert('Falta configurar la URL de Google Apps Script.');
+                return Promise.resolve();
+            }
             
             if (!silencioso) mostrarEstado("Descargando datos de la nube...");
 
@@ -650,7 +644,7 @@
             });
         }
 
-        // 2. SUBIR DATOS A LA NUBE (Exclusivamente por eventos de modificación directa)
+        // 2. SUBIR DATOS A LA NUBE (Unidireccional por cambios directos)
         function subirDatosNube(silencioso = true) {
             guardarCredencialesNube();
             const url = nubeUrlGlobal;
@@ -702,7 +696,7 @@
                 actualizarTablaClientes();
                 actualizarSelectClientes();
                 document.getElementById('form-cliente').reset();
-                subirDatosNube(true); // Cambio directo
+                subirDatosNube(true);
             });
         });
 
@@ -722,7 +716,7 @@
                 guardarEnDB('clientes', clientes, () => {
                     actualizarTablaClientes();
                     actualizarSelectClientes();
-                    subirDatosNube(true); // Cambio directo (eliminación)
+                    subirDatosNube(true);
                 });
             }
         }
@@ -760,7 +754,7 @@
                     actualizarListaSugerencias();
                     document.getElementById('form-producto').reset();
                     document.getElementById('contenedor-preview-imagen').innerHTML = '';
-                    subirDatosNube(true); // Cambio directo
+                    subirDatosNube(true);
                 });
             };
 
@@ -835,7 +829,7 @@
                         productos[codigoProductoActualizandoImagen].img = e.target.result;
                         guardarEnDB('productos', productos, () => {
                             actualizarTablaProductos();
-                            subirDatosNube(true); // Cambio directo
+                            subirDatosNube(true);
                         });
                     }
                 };
@@ -850,7 +844,7 @@
                 productos[codigo].stock = stockVal;
                 guardarEnDB('productos', productos, () => {
                     actualizarTablaProductos();
-                    subirDatosNube(true); // Cambio directo
+                    subirDatosNube(true);
                 });
             }
         }
@@ -861,7 +855,7 @@
                 guardarEnDB('productos', productos, () => {
                     actualizarTablaProductos();
                     actualizarListaSugerencias();
-                    subirDatosNube(true); // Cambio directo (eliminación)
+                    subirDatosNube(true);
                 });
             }
         }
@@ -1067,7 +1061,7 @@
                 document.getElementById('monto-pagado').value = '';
                 document.getElementById('btn-imprimir-ultimo').disabled = false;
 
-                subirDatosNube(true); // Cambio directo (venta realizada)
+                subirDatosNube(true);
                 alert('¡Venta completada con éxito!');
             });
         }
@@ -1148,7 +1142,7 @@
                     guardarEnDB('ventasDelDia', ventasDelDia, () => {
                         actualizarVistaCorte();
                         actualizarVistaBalance();
-                        subirDatosNube(true); // Cambio directo
+                        subirDatosNube(true);
                     });
                 }
             }
@@ -1180,7 +1174,7 @@
                 guardarEnDB('ventasDelDia', ventasDelDia, () => {
                     actualizarVistaCorte();
                     actualizarVistaBalance();
-                    subirDatosNube(true); // Cambio directo
+                    subirDatosNube(true);
                     alert('¡Caja cerrada correctamente y guardada en el historial mensual!');
                 });
             }
